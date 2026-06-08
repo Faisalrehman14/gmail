@@ -1,0 +1,275 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  VIEWER
+}
+
+enum ContactStatus {
+  ACTIVE
+  UNSUBSCRIBED
+  BOUNCED
+  INVALID
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  PAUSED
+  CANCELLED
+}
+
+enum EmailStatus {
+  PENDING
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  FAILED
+  UNSUBSCRIBED
+}
+
+enum ActivityAction {
+  LOGIN
+  LOGOUT
+  CREATE
+  UPDATE
+  DELETE
+  SEND
+  IMPORT
+  EXPORT
+  SCHEDULE
+  CANCEL
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(VIEWER)
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  campaigns    Campaign[]
+  templates    EmailTemplate[]
+  activityLogs ActivityLog[]
+  notifications Notification[]
+}
+
+model Contact {
+  id          String        @id @default(cuid())
+  email       String        @unique
+  firstName   String?
+  lastName    String?
+  company     String?
+  phone       String?
+  status      ContactStatus @default(ACTIVE)
+  isValid     Boolean       @default(true)
+  customFields String?      // JSON string
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  listMembers     ListMember[]
+  tags            ContactTag[]
+  segmentMembers  SegmentMember[]
+  campaignEmails  CampaignEmail[]
+}
+
+model ContactList {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members   ListMember[]
+  campaigns Campaign[]
+}
+
+model ListMember {
+  id        String   @id @default(cuid())
+  listId    String
+  contactId String
+  addedAt   DateTime @default(now())
+
+  list    ContactList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  contact Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, contactId])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6366f1")
+  createdAt DateTime @default(now())
+
+  contacts ContactTag[]
+}
+
+model ContactTag {
+  id        String @id @default(cuid())
+  contactId String
+  tagId     String
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([contactId, tagId])
+}
+
+model Segment {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  filters     String   // JSON filter rules
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members  SegmentMember[]
+  campaigns Campaign[]
+}
+
+model SegmentMember {
+  id        String @id @default(cuid())
+  segmentId String
+  contactId String
+
+  segment Segment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([segmentId, contactId])
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  subject     String
+  htmlContent String
+  jsonDesign  String?  // GrapesJS design JSON
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User       @relation(fields: [createdById], references: [id])
+  campaigns Campaign[]
+}
+
+model Campaign {
+  id           String         @id @default(cuid())
+  name         String
+  subject      String
+  htmlContent  String
+  status       CampaignStatus @default(DRAFT)
+  scheduledAt  DateTime?
+  sentAt       DateTime?
+  listId       String?
+  segmentId    String?
+  templateId   String?
+  smtpProviderId String?
+  createdById  String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  list         ContactList?   @relation(fields: [listId], references: [id])
+  segment      Segment?       @relation(fields: [segmentId], references: [id])
+  template     EmailTemplate? @relation(fields: [templateId], references: [id])
+  smtpProvider SmtpProvider?  @relation(fields: [smtpProviderId], references: [id])
+  createdBy    User           @relation(fields: [createdById], references: [id])
+  emails       CampaignEmail[]
+}
+
+model CampaignEmail {
+  id           String      @id @default(cuid())
+  campaignId   String
+  contactId    String
+  status       EmailStatus @default(PENDING)
+  trackingId   String      @unique @default(cuid())
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  openedAt     DateTime?
+  clickedAt    DateTime?
+  bouncedAt    DateTime?
+  unsubscribedAt DateTime?
+  errorMessage String?
+  retryCount   Int         @default(0)
+  maxRetries   Int         @default(3)
+  nextRetryAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact  Contact  @relation(fields: [contactId], references: [id])
+  events   EmailEvent[]
+}
+
+model EmailEvent {
+  id              String   @id @default(cuid())
+  campaignEmailId String
+  type            String   // sent, delivered, opened, clicked, bounced, unsubscribed
+  metadata        String?  // JSON
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  campaignEmail CampaignEmail @relation(fields: [campaignEmailId], references: [id], onDelete: Cascade)
+}
+
+model SmtpProvider {
+  id        String   @id @default(cuid())
+  name      String
+  host      String
+  port      Int      @default(587)
+  secure    Boolean  @default(false)
+  username  String
+  password  String
+  fromEmail String
+  fromName  String
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaigns Campaign[]
+}
+
+model ActivityLog {
+  id         String         @id @default(cuid())
+  userId     String?
+  action     ActivityAction
+  entityType String
+  entityId   String?
+  details    String?
+  ipAddress  String?
+  createdAt  DateTime       @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("info") // info, success, warning, error
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
