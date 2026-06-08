@@ -1,4 +1,18 @@
 export async function register() {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    try {
+      const { prisma } = await import("./lib/prisma");
+      const userCount = await prisma.user.count();
+      if (userCount === 0) {
+        const { runSeed } = await import("./lib/seed-database");
+        await runSeed();
+        console.log("Database auto-seeded on startup");
+      }
+    } catch (error) {
+      console.error("Auto-seed check failed:", error);
+    }
+  }
+
   const workerEnabled =
     process.env.ENABLE_INLINE_WORKER === "true" ||
     process.env.RAILWAY_ENVIRONMENT !== undefined;

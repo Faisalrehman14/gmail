@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 
 [deploy]
 startCommand = "npm start"
-preDeployCommand = "npx prisma db push --skip-generate"
+preDeployCommand = "npx prisma db push --skip-generate && npx tsx prisma/seed.ts"
 healthcheckPath = "/login"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
