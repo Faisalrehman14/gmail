@@ -68,14 +68,81 @@ For testing, use [Mailtrap](https://mailtrap.io) or [Ethereal](https://ethereal.
 ## Production
 
 ```bash
-# Switch to PostgreSQL
 DATABASE_URL="postgresql://user:pass@localhost:5432/mailflow"
-
 npm run build
 npm start
 ```
 
-Run the email worker as a background process or cron job hitting `POST /api/worker`.
+## Deploy on Railway
+
+### Step 1 — Railway account
+1. Go to [railway.app](https://railway.app) and sign in with GitHub
+2. Click **New Project** → **Deploy from GitHub repo**
+3. Select `Faisalrehman14/gmail`
+
+### Step 2 — Add PostgreSQL database
+1. In your project, click **+ New** → **Database** → **PostgreSQL**
+2. Railway creates `DATABASE_URL` automatically
+
+### Step 3 — Link database to web service
+1. Click your **web service** (the app, not the database)
+2. Go to **Variables** tab
+3. Click **Add Reference** → select `DATABASE_URL` from PostgreSQL service
+
+### Step 4 — Set environment variables
+Add these in the web service **Variables** tab:
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Reference from PostgreSQL (Step 3) |
+| `JWT_SECRET` | Long random string (e.g. `openssl rand -base64 32`) |
+| `NEXT_PUBLIC_APP_URL` | Your Railway app URL (e.g. `https://gmail-production.up.railway.app`) |
+| `ENABLE_INLINE_WORKER` | `true` |
+| `WORKER_INTERVAL_MS` | `5000` |
+| `NODE_ENV` | `production` |
+
+> **Important:** After first deploy, copy your public URL from **Settings → Networking → Generate Domain**, then set `NEXT_PUBLIC_APP_URL` to that exact URL and redeploy.
+
+### Step 5 — Generate public domain
+1. Web service → **Settings** → **Networking**
+2. Click **Generate Domain**
+3. Update `NEXT_PUBLIC_APP_URL` with this URL → redeploy
+
+### Step 6 — Seed demo data (first time only)
+Install Railway CLI and run seed:
+
+```bash
+npm i -g @railway/cli
+railway login
+railway link          # select your project
+railway run npm run db:seed
+```
+
+### Step 7 — SMTP for real emails
+1. Open your deployed app → **Settings**
+2. Add your SMTP provider (Gmail, SendGrid, Mailtrap, etc.)
+3. Test connection → set as default
+
+### Railway architecture
+
+```
+┌─────────────────┐     ┌──────────────────┐
+│  Next.js App    │────▶│   PostgreSQL     │
+│  (web service)  │     │   (database)     │
+│  + email worker │     └──────────────────┘
+└─────────────────┘
+```
+
+The email worker runs inside the web service automatically on Railway.
+
+### Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| Build fails | Ensure Node 20+ (set in `package.json` engines) |
+| Login doesn't work | Run `railway run npm run db:seed` |
+| Emails not sending | Add SMTP in Settings; check `NEXT_PUBLIC_APP_URL` |
+| Tracking links broken | `NEXT_PUBLIC_APP_URL` must match your Railway domain |
 
 ## Project Structure
 
