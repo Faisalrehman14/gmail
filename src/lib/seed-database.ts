@@ -126,23 +126,19 @@ export async function runSeed() {
     },
   });
 
-  await prisma.smtpProvider.upsert({
-    where: { id: "seed-smtp" },
-    update: {},
-    create: {
-      id: "seed-smtp",
-      name: "Mailtrap (Demo)",
-      host: "sandbox.smtp.mailtrap.io",
-      port: 2525,
-      secure: false,
-      username: "demo",
-      password: "demo",
-      fromEmail: "noreply@mailflow.com",
-      fromName: "MailFlow",
-      isDefault: true,
-      isActive: true,
-    },
-  });
+  // Only add demo SMTP if no real SMTP env vars are configured
+  const hasRealSmtp =
+    process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
+
+  if (hasRealSmtp) {
+    const { syncEnvSmtpProvider } = await import("./env-smtp");
+    await syncEnvSmtpProvider();
+  } else {
+    const existing = await prisma.smtpProvider.count({ where: { isActive: true } });
+    if (existing === 0) {
+      console.log("No SMTP configured — add real SMTP in Settings or Railway env vars");
+    }
+  }
 
   console.log("Seed completed:");
   console.log("  Admin: admin@mailflow.com / admin123");

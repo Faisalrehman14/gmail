@@ -2,6 +2,11 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     try {
       const { prisma } = await import("./lib/prisma");
+      const { syncEnvSmtpProvider } = await import("./lib/env-smtp");
+
+      // Always sync real SMTP from env vars (Railway)
+      await syncEnvSmtpProvider();
+
       const userCount = await prisma.user.count();
       if (userCount === 0) {
         const { runSeed } = await import("./lib/seed-database");
@@ -9,7 +14,7 @@ export async function register() {
         console.log("Database auto-seeded on startup");
       }
     } catch (error) {
-      console.error("Auto-seed check failed:", error);
+      console.error("Startup init failed:", error);
     }
   }
 
