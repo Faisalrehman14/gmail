@@ -9,6 +9,7 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { MailOpen, MousePointerClick, AlertTriangle, UserMinus, Send as SendIcon } from "lucide-react";
 import { formatPercent } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { LiveMonitor } from "@/components/campaign/live-monitor";
 
 interface AutopilotStatus {
   autopilot: {
@@ -192,6 +193,11 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           </CardContent>
         </Card>
       )}
+
+      <LiveMonitor
+        campaignId={id}
+        isActive={campaign.status === "SENDING"}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard title="Total" value={stats.total} icon={SendIcon} />
