@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { parseFile } from "@/lib/import";
+import { parseFileWithStats } from "@/lib/import";
 import { logActivity } from "@/lib/activity";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-response";
 
@@ -19,7 +19,10 @@ export async function POST(request: Request) {
         ? buffer
         : await file.text();
 
-    const imported = parseFile(file.name, content);
+    const { contacts: imported, duplicatesRemoved, rawCount } = parseFileWithStats(
+      file.name,
+      content
+    );
 
     let created = 0;
     let updated = 0;
@@ -85,10 +88,17 @@ export async function POST(request: Request) {
       userId: session.id,
       action: "IMPORT",
       entityType: "contact",
-      details: `Imported ${created} new, ${updated} updated, ${invalid} invalid from ${file.name}`,
+      details: `Imported ${created} new, ${updated} updated, ${invalid} invalid, ${duplicatesRemoved} duplicates removed from ${file.name}`,
     });
 
-    return apiSuccess({ created, updated, invalid, total: imported.length });
+    return apiSuccess({
+      created,
+      updated,
+      invalid,
+      duplicatesRemoved,
+      total: imported.length,
+      rawCount,
+    });
   } catch (error) {
     return handleApiError(error);
   }

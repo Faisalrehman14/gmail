@@ -101,6 +101,28 @@ function rowToContact(row: Record<string, string>): ImportedContact | null {
   };
 }
 
+/** Keep first occurrence of each email (case-insensitive) */
+export function dedupeContacts(contacts: ImportedContact[]): {
+  contacts: ImportedContact[];
+  duplicatesRemoved: number;
+} {
+  const seen = new Set<string>();
+  const unique: ImportedContact[] = [];
+
+  for (const contact of contacts) {
+    const validation = validateEmail(contact.email);
+    const email = validation.email;
+    if (seen.has(email)) continue;
+    seen.add(email);
+    unique.push({ ...contact, email, isValid: contact.isValid && validation.isValid });
+  }
+
+  return {
+    contacts: unique,
+    duplicatesRemoved: contacts.length - unique.length,
+  };
+}
+
 function parsePlainEmailList(cells: string[]): ImportedContact[] {
   const results: ImportedContact[] = [];
   const seen = new Set<string>();
@@ -179,7 +201,7 @@ export function parseExcel(buffer: ArrayBuffer): ImportedContact[] {
   return parsePlainEmailList(allCells);
 }
 
-export function parseFile(
+function parseFileRaw(
   filename: string,
   content: string | ArrayBuffer
 ): ImportedContact[] {
@@ -188,4 +210,20 @@ export function parseFile(
   if (ext === "txt") return parseTXT(content as string);
   if (ext === "xlsx" || ext === "xls") return parseExcel(content as ArrayBuffer);
   throw new Error(`Unsupported file type: ${ext}`);
+}
+
+export function parseFile(
+  filename: string,
+  content: string | ArrayBuffer
+): ImportedContact[] {
+  return dedupeContacts(parseFileRaw(filename, content)).contacts;
+}
+
+export function parseFileWithStats(
+  filename: string,
+  content: string | ArrayBuffer
+): { contacts: ImportedContact[]; duplicatesRemoved: number; rawCount: number } {
+  const raw = parseFileRaw(filename, content);
+  const { contacts, duplicatesRemoved } = dedupeContacts(raw);
+  return { contacts, duplicatesRemoved, rawCount: raw.length };
 }

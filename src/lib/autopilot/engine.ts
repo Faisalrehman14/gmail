@@ -79,6 +79,8 @@ export async function launchAutopilotCampaign(
     input.contacts.map((c) => ({ ...c, isValid: true }))
   );
 
+  const duplicateCount = invalid.filter((c) => c.reason === "Duplicate").length;
+
   if (valid.length === 0) {
     throw new Error("No valid email addresses found in the list.");
   }
@@ -172,7 +174,10 @@ export async function launchAutopilotCampaign(
     invalidContacts: invalid.length,
     estimatedDays: config.estimatedDays,
     dailyLimit: config.dailyLimit,
-    message: `Campaign launched. ${valid.length} emails will be sent safely over ~${config.estimatedDays} day(s) at ${config.dailyLimit} emails/day.`,
+    message:
+      duplicateCount > 0
+        ? `Campaign launched. ${valid.length} unique emails queued (${duplicateCount} duplicates skipped). Delivery over ~${config.estimatedDays} day(s) at ${config.dailyLimit}/day.`
+        : `Campaign launched. ${valid.length} emails will be sent safely over ~${config.estimatedDays} day(s) at ${config.dailyLimit} emails/day.`,
   };
 }
 
