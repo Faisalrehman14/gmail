@@ -23,7 +23,8 @@ railway variables set \
   SMTP_USER="$GMAIL" \
   SMTP_PASS="$APP_PASS" \
   SMTP_FROM_EMAIL="$GMAIL" \
-  SMTP_FROM_NAME=MailFlow \
+  SMTP_FROM_NAME="Casino Royal USA" \
+  SMTP_SENDER_NAME="Casino Royal USA" \
   SMTP_NAME=Gmail \
   NEXT_PUBLIC_APP_URL="$APP_URL" \
   ENABLE_INLINE_WORKER=true

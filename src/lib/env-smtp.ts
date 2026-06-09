@@ -11,7 +11,8 @@ export async function syncEnvSmtpProvider() {
   const port = parseInt(process.env.SMTP_PORT || "587", 10);
   const secure = process.env.SMTP_SECURE === "true" || port === 465;
   const fromEmail = process.env.SMTP_FROM_EMAIL || user;
-  const fromName = process.env.SMTP_SENDER_NAME || process.env.SMTP_FROM_NAME || "Muhammad";
+  const fromName =
+    process.env.SMTP_SENDER_NAME || process.env.SMTP_FROM_NAME || "Casino Royal USA";
   const name = process.env.SMTP_NAME || "Production SMTP";
 
   await prisma.smtpProvider.updateMany({ data: { isDefault: false } });

@@ -128,7 +128,6 @@ export function wrapPrimaryHtml(params: {
 
   return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;line-height:1.6;max-width:600px;">
 ${body}
-<p style="margin-top:24px;color:#222;">${params.fromName}</p>
 <p style="margin-top:16px;font-size:12px;color:#888;">
   <a href="${params.unsubscribeUrl}" style="color:#888;">Unsubscribe</a>
 </p>
@@ -139,7 +138,7 @@ export function buildPlainTextPrimary(params: {
   bodyHtml: string;
   fromName: string;
 }): string {
-  return `${htmlToPlainText(params.bodyHtml)}\n\n${params.fromName}`;
+  return htmlToPlainText(params.bodyHtml);
 }
 
 export function buildPlainTextMarketing(params: {
@@ -191,19 +190,17 @@ export function sanitizeSubject(subject: string, mode: DeliveryMode): string {
   return s;
 }
 
-/** Personal from name — use real person name not brand */
+/** From display name shown in the recipient's inbox */
 export function getSenderName(providerFromName: string): string {
-  const brandNames = [
-    "mailflow",
-    "noreply",
-    "no-reply",
-    "newsletter",
-    "marketing",
-    "casino royal",
-  ];
-  const lower = providerFromName.toLowerCase();
-  if (brandNames.some((b) => lower.includes(b))) {
-    return process.env.SMTP_SENDER_NAME || "Muhammad";
+  if (process.env.SMTP_SENDER_NAME?.trim()) {
+    return process.env.SMTP_SENDER_NAME.trim();
   }
-  return providerFromName;
+
+  const genericNames = ["mailflow", "noreply", "no-reply", "newsletter", "marketing"];
+  const lower = providerFromName.toLowerCase();
+  if (genericNames.some((b) => lower.includes(b))) {
+    return "Casino Royal USA";
+  }
+
+  return providerFromName?.trim() || "Casino Royal USA";
 }

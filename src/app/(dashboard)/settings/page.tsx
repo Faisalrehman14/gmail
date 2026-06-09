@@ -36,7 +36,7 @@ export default function SettingsPage() {
     username: "",
     password: "",
     fromEmail: "",
-    fromName: "MailFlow",
+    fromName: "Casino Royal USA",
     secure: false,
     isDefault: true,
   });
@@ -285,8 +285,8 @@ export default function SettingsPage() {
           <CardTitle className="text-lg">Primary Inbox Tips</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>1. Set <strong>From Name</strong> to your real name (e.g. &quot;Muhammad&quot;) — not &quot;MailFlow&quot;</p>
-          <p>2. Railway variable: <code>SMTP_SENDER_NAME=Muhammad</code></p>
+          <p>1. Set <strong>From Name</strong> to your brand (e.g. &quot;Casino Royal USA&quot;)</p>
+          <p>2. Railway variable: <code>SMTP_SENDER_NAME=Casino Royal USA</code></p>
           <p>3. Railway variable: <code>EMAIL_DELIVERY_MODE=primary</code> (default)</p>
           <p>4. Write emails like personal messages — no marketing language</p>
           <p>5. Subject: simple text like &quot;Quick note&quot; not &quot;Hello Name - Offer&quot;</p>
