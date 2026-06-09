@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { PERSONALIZATION_VARIABLES } from "@/lib/personalization";
+import { CASINO_ROYAL_HTML, CASINO_ROYAL_SUBJECT } from "@/lib/templates/casino-royal";
 
 export default function AutopilotPage() {
   const router = useRouter();
@@ -122,8 +123,23 @@ export default function AutopilotPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>2. Campaign Details</CardTitle>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setForm({
+                ...form,
+                name: "Casino Royal USA",
+                subject: CASINO_ROYAL_SUBJECT,
+                htmlContent: CASINO_ROYAL_HTML,
+              })
+            }
+          >
+            Load Casino Royal Template
+          </Button>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">

@@ -108,6 +108,23 @@ export async function runSeed() {
     },
   });
 
+  const { CASINO_ROYAL_SUBJECT, CASINO_ROYAL_HTML } = await import("./templates/casino-royal");
+
+  await prisma.emailTemplate.upsert({
+    where: { id: "seed-casino-royal-template" },
+    update: {
+      subject: CASINO_ROYAL_SUBJECT,
+      htmlContent: CASINO_ROYAL_HTML,
+    },
+    create: {
+      id: "seed-casino-royal-template",
+      name: "Casino Royal USA",
+      subject: CASINO_ROYAL_SUBJECT,
+      htmlContent: CASINO_ROYAL_HTML,
+      createdById: admin.id,
+    },
+  });
+
   await prisma.emailTemplate.upsert({
     where: { id: "seed-welcome-template" },
     update: {},
