@@ -1,4 +1,4 @@
-/** Casino Royal USA — simple professional email (Primary inbox optimized) */
+/** Casino Royal USA — Primary inbox email with light branding images */
 
 const BASE = "https://casinoroyalusa.com";
 
@@ -12,12 +12,20 @@ export const CASINO_ROYAL_IMAGES = {
 export const CASINO_ROYAL_SUBJECT = "Hello {{first_name}}";
 
 /**
- * Simple HTML fragment — no DOCTYPE, no images, no marketing tables.
- * Sent through Primary mode so Gmail treats it like a personal email.
+ * HTML fragment (no DOCTYPE) — stays in Primary mode.
+ * Images use width/alt only (no inline styles) so primary wrapper keeps them intact.
  */
-export const CASINO_ROYAL_HTML = `<p>Hello {{first_name}},</p>
+export const CASINO_ROYAL_HTML = `<center>
+<img src="${CASINO_ROYAL_IMAGES.logo}" alt="Casino Royal USA" width="150" border="0">
+</center>
+
+<p>Hello {{first_name}},</p>
 
 <p>I hope this message finds you well. I wanted to share some information about <strong>Casino Royal USA</strong>, our social gaming platform for players across the United States.</p>
+
+<center>
+<img src="${CASINO_ROYAL_IMAGES.banner}" alt="Casino Royal USA" width="560" border="0">
+</center>
 
 <p>Here are the key highlights of our platform:</p>
 
@@ -27,6 +35,10 @@ export const CASINO_ROYAL_HTML = `<p>Hello {{first_name}},</p>
 <strong>30+ Casino Games Available</strong> — A curated library including Orion Stars, Fire Kirin, Milky Way, V-Power, and more.<br><br>
 <strong>Trusted and Reliable Platform</strong> — Serving 1,000+ active players with 24/7 dedicated support.
 </p>
+
+<center>
+<img src="${CASINO_ROYAL_IMAGES.games}" alt="Casino Royal USA games" width="560" border="0">
+</center>
 
 <p>Our team handles all inquiries through Facebook. If you have questions or need help getting started, you can reach us here:</p>
 

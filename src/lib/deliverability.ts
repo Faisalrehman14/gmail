@@ -121,7 +121,6 @@ export function wrapPrimaryHtml(params: {
   fromName: string;
   unsubscribeUrl: string;
 }): string {
-  // Strip heavy HTML if user pasted marketing template
   const body = params.bodyHtml
     .replace(/<h1[^>]*>/gi, "<p>")
     .replace(/<\/h1>/gi, "</p>")
