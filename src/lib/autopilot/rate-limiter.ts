@@ -10,11 +10,12 @@ function getDateInTimezone(timezone: string): string {
 }
 
 function getHourInTimezone(timezone: string): number {
-  const hour = new Intl.DateTimeFormat("en-US", {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     hour: "numeric",
-    hour12: false,
-  }).format(new Date());
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "0";
   return parseInt(hour, 10);
 }
 
@@ -54,9 +55,13 @@ export function getEffectiveDailyLimit(config: AutopilotConfig): number {
 }
 
 export function isWithinSendWindow(config: AutopilotConfig): boolean {
+  if (process.env.AUTOPILOT_24_7 === "true") return true;
+
   const hour = getHourInTimezone(config.sendWindow.timezone);
   const { startHour, endHour } = config.sendWindow;
-  return hour >= startHour && hour < endHour;
+  // endHour 24 = send any time until midnight
+  const effectiveEnd = endHour >= 24 ? 24 : endHour;
+  return hour >= startHour && hour < effectiveEnd;
 }
 
 export interface RateLimitResult {

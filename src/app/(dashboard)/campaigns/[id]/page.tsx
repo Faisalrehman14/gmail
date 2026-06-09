@@ -21,6 +21,8 @@ interface AutopilotStatus {
     stats: { sentToday: number; totalSent: number; totalInvalid: number };
     sendWindow: { startHour: number; endHour: number; timezone: string };
   };
+  rateLimit?: { canSend: boolean; reason?: string; remainingToday: number } | null;
+  lastFailed?: { email: string; error: string | null } | null;
   progress: { total: number; sent: number; queued: number; percentComplete: number };
 }
 
@@ -30,6 +32,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const [campaign, setCampaign] = useState<Record<string, unknown> | null>(null);
   const [autopilot, setAutopilot] = useState<AutopilotStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [forcingSend, setForcingSend] = useState(false);
 
   const fetchData = useCallback(async () => {
     const [campRes, autoRes] = await Promise.all([
@@ -46,6 +49,19 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  async function forceSendNow() {
+    setForcingSend(true);
+    const res = await fetch(`/api/autopilot/${id}/send-now`, { method: "POST" });
+    const data = await res.json();
+    if (data.success) {
+      toast({ title: "Sending now", description: "Queue processed", variant: "success" });
+      fetchData();
+    } else {
+      toast({ title: "Could not send", description: data.error, variant: "destructive" });
+    }
+    setForcingSend(false);
+  }
 
   async function sendCampaign() {
     const res = await fetch(`/api/campaigns/${id}/send`, { method: "POST" });
@@ -141,10 +157,37 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
               </div>
             )}
 
+            {autopilot.rateLimit && !autopilot.rateLimit.canSend && (
+              <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100">
+                Waiting: {autopilot.rateLimit.reason}
+              </div>
+            )}
+
+            {autopilot.lastFailed?.error && (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                Last error ({autopilot.lastFailed.email}): {autopilot.lastFailed.error}
+              </div>
+            )}
+
             {autopilot.progress.queued > 0 && campaign.status === "SENDING" && (
-              <p className="text-sm text-muted-foreground">
-                {autopilot.progress.queued} emails queued — sending automatically in background
-              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {autopilot.progress.queued} emails queued — sending automatically in background
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={forcingSend}
+                  onClick={forceSendNow}
+                >
+                  {forcingSend ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  Send Now
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>

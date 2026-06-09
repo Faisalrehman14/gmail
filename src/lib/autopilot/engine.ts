@@ -3,6 +3,7 @@ import { queueCampaignEmails } from "../campaign-service";
 import { logActivity } from "../activity";
 import { getProviderLimits, estimateDays } from "./provider-limits";
 import { verifyContactList } from "./verification";
+import { checkRateLimit } from "./rate-limiter";
 import type {
   AutopilotConfig,
   AutopilotLaunchInput,
@@ -13,16 +14,18 @@ export function createDefaultConfig(
   contactCount: number,
   host: string,
   providerName?: string,
-  timezone = "Asia/Karachi"
+  timezone = process.env.AUTOPILOT_TIMEZONE || "Asia/Karachi"
 ): AutopilotConfig {
   const limits = getProviderLimits(host, providerName);
   const dailyLimit = Math.floor(limits.daily * 0.9); // 10% safety margin
   const hourlyLimit = Math.floor(limits.hourly * 0.85);
+  const startHour = parseInt(process.env.AUTOPILOT_SEND_START || "0", 10);
+  const endHour = parseInt(process.env.AUTOPILOT_SEND_END || "24", 10);
 
   return {
     dailyLimit,
     hourlyLimit,
-    sendWindow: { startHour: 9, endHour: 18, timezone },
+    sendWindow: { startHour, endHour, timezone },
     warmup: {
       enabled: contactCount > 200,
       startDaily: Math.min(50, dailyLimit),
@@ -224,6 +227,17 @@ export async function getAutopilotStatus(campaignId: string) {
   const failed = statusMap.FAILED || 0;
   const bounced = statusMap.BOUNCED || 0;
 
+  const rateLimit = config ? checkRateLimit(config) : null;
+
+  const lastFailed = await prisma.campaignEmail.findFirst({
+    where: { campaignId, status: "FAILED" },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      errorMessage: true,
+      contact: { select: { email: true } },
+    },
+  });
+
   return {
     campaign: {
       id: campaign.id,
@@ -232,6 +246,16 @@ export async function getAutopilotStatus(campaignId: string) {
       mode: campaign.mode,
     },
     autopilot: config,
+    rateLimit: rateLimit
+      ? {
+          canSend: rateLimit.canSend,
+          reason: rateLimit.reason,
+          remainingToday: rateLimit.remainingToday,
+        }
+      : null,
+    lastFailed: lastFailed
+      ? { email: lastFailed.contact.email, error: lastFailed.errorMessage }
+      : null,
     progress: {
       total,
       sent,
@@ -241,4 +265,30 @@ export async function getAutopilotStatus(campaignId: string) {
       percentComplete: total > 0 ? Math.round((sent / total) * 100) : 0,
     },
   };
+}
+
+/** Unblock a stuck autopilot campaign (24/7 window, unpaused) */
+export async function unblockAutopilotCampaign(campaignId: string) {
+  const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
+  if (!campaign?.autopilotConfig) throw new Error("Not an autopilot campaign");
+
+  const config = parseAutopilotConfig(campaign.autopilotConfig);
+  if (!config) throw new Error("Invalid autopilot config");
+
+  config.sendWindow = { startHour: 0, endHour: 24, timezone: config.sendWindow.timezone };
+  config.paused = false;
+  config.pauseReason = undefined;
+
+  await prisma.campaign.update({
+    where: { id: campaignId },
+    data: {
+      status: "SENDING",
+      autopilotConfig: JSON.stringify(config),
+    },
+  });
+
+  const { processEmailQueue } = await import("../campaign-service");
+  await processEmailQueue();
+
+  return config;
 }
