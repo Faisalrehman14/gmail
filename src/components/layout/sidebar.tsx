@@ -15,6 +15,7 @@ import {
   Settings,
   Activity,
   Send,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/lists", label: "Lists", icon: List },
   { href: "/tags", label: "Tags", icon: Tags },
   { href: "/segments", label: "Segments", icon: Filter },
+  { href: "/autopilot", label: "Autopilot", icon: Rocket },
   { href: "/campaigns", label: "Campaigns", icon: Send },
   { href: "/templates", label: "Templates", icon: FileText },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },

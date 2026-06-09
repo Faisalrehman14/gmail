@@ -29,6 +29,11 @@ enum CampaignStatus {
   CANCELLED
 }
 
+enum CampaignMode {
+  MANUAL
+  AUTOPILOT
+}
+
 enum EmailStatus {
   PENDING
   QUEUED
@@ -172,20 +177,22 @@ model EmailTemplate {
 }
 
 model Campaign {
-  id           String         @id @default(cuid())
-  name         String
-  subject      String
-  htmlContent  String
-  status       CampaignStatus @default(DRAFT)
-  scheduledAt  DateTime?
-  sentAt       DateTime?
-  listId       String?
-  segmentId    String?
-  templateId   String?
+  id             String         @id @default(cuid())
+  name           String
+  subject        String
+  htmlContent    String
+  status         CampaignStatus @default(DRAFT)
+  mode           CampaignMode   @default(MANUAL)
+  autopilotConfig String?       // JSON: limits, warmup, stats, schedule
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  listId         String?
+  segmentId      String?
+  templateId     String?
   smtpProviderId String?
-  createdById  String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  createdById    String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   list         ContactList?   @relation(fields: [listId], references: [id])
   segment      Segment?       @relation(fields: [segmentId], references: [id])

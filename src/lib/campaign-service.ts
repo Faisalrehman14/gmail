@@ -1,9 +1,15 @@
-import type { SmtpProvider } from "@prisma/client";
+import type { SmtpProvider, CampaignMode } from "@prisma/client";
 import { prisma } from "./prisma";
 import { personalizeContent } from "./personalization";
 import { sendEmail } from "./smtp";
 import { logActivity } from "./activity";
 import { createNotification } from "./notifications";
+import {
+  parseAutopilotConfig,
+  checkBounceAndPause,
+} from "./autopilot/engine";
+import { checkRateLimit, recordSend } from "./autopilot/rate-limiter";
+import { getProviderLimits } from "./autopilot/provider-limits";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const BATCH_SIZE = 10;
@@ -49,12 +55,70 @@ export async function queueCampaignEmails(campaignId: string) {
   return contacts.length;
 }
 
+type EmailWithRelations = {
+  id: string;
+  trackingId: string;
+  retryCount: number;
+  maxRetries: number;
+  contact: {
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    company: string | null;
+    phone: string | null;
+    customFields: string | null;
+  };
+  campaign: {
+    id: string;
+    subject: string;
+    htmlContent: string;
+    mode: CampaignMode;
+    autopilotConfig: string | null;
+    smtpProvider: SmtpProvider | null;
+    createdBy: { id: string };
+  };
+};
+
+async function canSendAutopilotEmail(
+  campaign: EmailWithRelations["campaign"]
+): Promise<{ allowed: boolean; reason?: string }> {
+  if (campaign.mode !== "AUTOPILOT" || !campaign.autopilotConfig) {
+    return { allowed: true };
+  }
+
+  const config = parseAutopilotConfig(campaign.autopilotConfig);
+  if (!config) return { allowed: true };
+
+  const result = checkRateLimit(config);
+  if (!result.canSend) {
+    // Persist updated stats even when blocked
+    await prisma.campaign.update({
+      where: { id: campaign.id },
+      data: { autopilotConfig: JSON.stringify(result.config) },
+    });
+    return { allowed: false, reason: result.reason };
+  }
+
+  return { allowed: true };
+}
+
+async function recordAutopilotSend(campaignId: string, autopilotConfig: string) {
+  const config = parseAutopilotConfig(autopilotConfig);
+  if (!config) return;
+
+  const updated = recordSend(config);
+  await prisma.campaign.update({
+    where: { id: campaignId },
+    data: { autopilotConfig: JSON.stringify(updated) },
+  });
+}
+
 export async function processEmailQueue() {
   const now = new Date();
 
   const queued = await prisma.campaignEmail.findMany({
     where: { status: "QUEUED" },
-    take: BATCH_SIZE,
+    take: BATCH_SIZE * 3,
     include: {
       contact: true,
       campaign: { include: { smtpProvider: true, createdBy: true } },
@@ -76,36 +140,42 @@ export async function processEmailQueue() {
     orderBy: { createdAt: "asc" },
   });
 
-  const pendingEmails = [...queued, ...retries].slice(0, BATCH_SIZE);
+  const toProcess: EmailWithRelations[] = [];
 
-  for (const email of pendingEmails) {
+  for (const email of queued) {
+    if (toProcess.length >= BATCH_SIZE) break;
+    const check = await canSendAutopilotEmail(email.campaign);
+    if (check.allowed) {
+      toProcess.push(email as EmailWithRelations);
+    }
+  }
+
+  for (const email of retries) {
+    if (toProcess.length >= BATCH_SIZE) break;
+    toProcess.push(email as EmailWithRelations);
+  }
+
+  for (const email of toProcess) {
+    const provider = email.campaign.smtpProvider;
+    const limits = provider
+      ? getProviderLimits(provider.host, provider.name)
+      : getProviderLimits("default");
+
     await processSingleEmail(email);
+
+    if (email.campaign.mode === "AUTOPILOT" && email.campaign.autopilotConfig) {
+      await recordAutopilotSend(email.campaign.id, email.campaign.autopilotConfig);
+      await checkBounceAndPause(email.campaign.id);
+    }
+
+    // Throttle between sends for deliverability
+    if (limits.minDelayMs > 0) {
+      await new Promise((r) => setTimeout(r, limits.minDelayMs));
+    }
   }
 
   await updateCampaignStatuses();
 }
-
-type EmailWithRelations = {
-  id: string;
-  trackingId: string;
-  retryCount: number;
-  maxRetries: number;
-  contact: {
-    email: string;
-    firstName: string | null;
-    lastName: string | null;
-    company: string | null;
-    phone: string | null;
-    customFields: string | null;
-  };
-  campaign: {
-    id: string;
-    subject: string;
-    htmlContent: string;
-    smtpProvider: SmtpProvider | null;
-    createdBy: { id: string };
-  };
-};
 
 async function processSingleEmail(email: EmailWithRelations) {
   const provider =
@@ -117,10 +187,7 @@ async function processSingleEmail(email: EmailWithRelations) {
   if (!provider) {
     await prisma.campaignEmail.update({
       where: { id: email.id },
-      data: {
-        status: "FAILED",
-        errorMessage: "No SMTP provider configured",
-      },
+      data: { status: "FAILED", errorMessage: "No SMTP provider configured" },
     });
     return;
   }
@@ -160,11 +227,7 @@ async function processSingleEmail(email: EmailWithRelations) {
 
     await prisma.campaignEmail.update({
       where: { id: email.id },
-      data: {
-        status: "SENT",
-        sentAt: new Date(),
-        deliveredAt: new Date(),
-      },
+      data: { status: "SENT", sentAt: new Date(), deliveredAt: new Date() },
     });
 
     await prisma.emailEvent.create({
