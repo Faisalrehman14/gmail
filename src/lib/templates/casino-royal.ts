@@ -286,7 +286,7 @@ export function getCasinoRoyalLinks() {
     website: process.env.NEXT_PUBLIC_WEBSITE_URL || "https://casinoroyalusa.com",
     facebook:
       process.env.NEXT_PUBLIC_FACEBOOK_URL ||
-      "https://m.me/casinoroyalusa12",
+      "https://www.facebook.com/casinoroyalusa12",
     phone: process.env.NEXT_PUBLIC_CONTACT_PHONE || "+917080849048",
   };
 }

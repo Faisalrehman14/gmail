@@ -44,7 +44,12 @@ function injectTracking(html: string, trackingId: string, appUrl: string) {
   return htmlWithPixel.replace(
     /href="(https?:\/\/[^"]+)"/gi,
     (match, url) => {
-      if (url.includes("/api/track/") || url.includes("casinoroyalusa.com/static/")) {
+      if (
+        url.includes("/api/track/") ||
+        url.includes("casinoroyalusa.com/static/") ||
+        url.includes("facebook.com") ||
+        url.includes("m.me/")
+      ) {
         return match;
       }
       return `href="${appUrl}/api/track/click/${trackingId}?url=${encodeURIComponent(url)}"`;
