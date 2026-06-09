@@ -1,5 +1,11 @@
 import nodemailer from "nodemailer";
 import type { SmtpProvider } from "@prisma/client";
+import {
+  htmlToPlainText,
+  buildDeliverabilityHeaders,
+  wrapEmailHtml,
+  sanitizeSubject,
+} from "./deliverability";
 
 export function createTransporter(provider: SmtpProvider) {
   return nodemailer.createTransport({
@@ -21,15 +27,17 @@ export function createTransporter(provider: SmtpProvider) {
 }
 
 function injectTracking(html: string, trackingId: string, appUrl: string) {
-  const trackingPixel = `<img src="${appUrl}/api/track/open/${trackingId}" width="1" height="1" alt="" style="display:none" />`;
+  const trackingPixel = `<img src="${appUrl}/api/track/open/${trackingId}" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0" />`;
   const htmlWithPixel = html.includes("</body>")
     ? html.replace("</body>", `${trackingPixel}</body>`)
     : html + trackingPixel;
 
   return htmlWithPixel.replace(
-    /href="(https?:\/\/[^"]+)"/g,
-    (_, url) =>
-      `href="${appUrl}/api/track/click/${trackingId}?url=${encodeURIComponent(url)}"`
+    /href="(https?:\/\/[^"]+)"/gi,
+    (match, url) => {
+      if (url.includes("/api/track/")) return match;
+      return `href="${appUrl}/api/track/click/${trackingId}?url=${encodeURIComponent(url)}"`;
+    }
   );
 }
 
@@ -42,14 +50,31 @@ export async function sendEmail(params: {
   appUrl: string;
 }) {
   const transporter = createTransporter(params.provider);
-  const html = injectTracking(params.html, params.trackingId, params.appUrl);
+  const unsubscribeUrl = `${params.appUrl}/api/track/unsubscribe/${params.trackingId}`;
+
+  const wrappedHtml = wrapEmailHtml({
+    bodyHtml: params.html,
+    unsubscribeUrl,
+    fromName: params.provider.fromName,
+    fromEmail: params.provider.fromEmail,
+  });
+
+  const html = injectTracking(wrappedHtml, params.trackingId, params.appUrl);
+  const text = htmlToPlainText(params.html) + `\n\nUnsubscribe: ${unsubscribeUrl}`;
+  const subject = sanitizeSubject(params.subject);
 
   const info = await transporter.sendMail({
     from: `"${params.provider.fromName}" <${params.provider.fromEmail}>`,
     to: params.to,
-    subject: params.subject,
+    subject,
     html,
-    headers: { "X-Tracking-Id": params.trackingId },
+    text,
+    replyTo: params.provider.fromEmail,
+    headers: buildDeliverabilityHeaders({
+      trackingId: params.trackingId,
+      unsubscribeUrl,
+      fromEmail: params.provider.fromEmail,
+    }),
   });
 
   return info;
@@ -62,22 +87,24 @@ export async function sendTestEmail(params: {
 }) {
   const transporter = createTransporter(params.provider);
 
-  const html = `
-    <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px">
-      <h2 style="color:#6366f1">MailFlow Test Email</h2>
-      <p>Your SMTP configuration is working correctly.</p>
-      <p><strong>Provider:</strong> ${params.provider.name}</p>
-      <p><strong>Host:</strong> ${params.provider.host}:${params.provider.port}</p>
-      <p><strong>From:</strong> ${params.provider.fromEmail}</p>
-      <p style="color:#64748b;font-size:13px">Sent at ${new Date().toUTCString()}</p>
-    </div>
-  `;
+  const html = wrapEmailHtml({
+    bodyHtml: `
+      <h2 style="color:#333;margin-top:0">SMTP Test Successful</h2>
+      <p>Your MailFlow email configuration is working correctly.</p>
+      <p>This is a deliverability-optimized test message with proper headers and plain-text fallback.</p>
+    `,
+    unsubscribeUrl: `${params.appUrl}`,
+    fromName: params.provider.fromName,
+    fromEmail: params.provider.fromEmail,
+  });
 
   return transporter.sendMail({
     from: `"${params.provider.fromName}" <${params.provider.fromEmail}>`,
     to: params.to,
-    subject: "MailFlow — SMTP Test Successful",
+    subject: "MailFlow — Configuration Test",
     html,
+    text: "Your MailFlow SMTP configuration is working correctly.",
+    replyTo: params.provider.fromEmail,
   });
 }
 

@@ -26,11 +26,10 @@ export default function AutopilotPage() {
   const [form, setForm] = useState({
     name: "",
     subject: "Hello {{first_name}}",
-    htmlContent: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px">
-  <h1 style="color:#333">Hi {{first_name}},</h1>
-  <p>We have something important to share with you.</p>
-  <p>Best regards,<br>The Team</p>
-</div>`,
+    htmlContent: `<h1 style="color:#1a1a1a;font-size:24px;margin:0 0 16px">Hi {{first_name}},</h1>
+<p style="color:#444;line-height:1.6">Thank you for being part of our community. We wanted to reach out with a quick update.</p>
+<p style="color:#444;line-height:1.6">If you have any questions, simply reply to this email — we read every message.</p>
+<p style="color:#444;margin-top:24px">Best regards,<br><strong>The MailFlow Team</strong></p>`,
     timezone: "Asia/Karachi",
   });
 

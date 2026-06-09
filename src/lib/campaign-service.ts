@@ -207,20 +207,11 @@ async function processSingleEmail(email: EmailWithRelations) {
       email.contact
     );
 
-    const unsubscribeLink = `${APP_URL}/api/track/unsubscribe/${email.trackingId}`;
-    const htmlWithUnsub = personalizedHtml.includes("</body>")
-      ? personalizedHtml.replace(
-          "</body>",
-          `<p style="font-size:12px;color:#999;text-align:center"><a href="${unsubscribeLink}">Unsubscribe</a></p></body>`
-        )
-      : personalizedHtml +
-        `<p style="font-size:12px;color:#999;text-align:center"><a href="${unsubscribeLink}">Unsubscribe</a></p>`;
-
     await sendEmail({
       provider,
       to: email.contact.email,
       subject: personalizedSubject,
-      html: htmlWithUnsub,
+      html: personalizedHtml,
       trackingId: email.trackingId,
       appUrl: APP_URL,
     });
