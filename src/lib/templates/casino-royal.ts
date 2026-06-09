@@ -209,14 +209,13 @@ export const CASINO_ROYAL_HTML = `<!DOCTYPE html>
                     <p style="margin:0 0 6px;font-size:11px;color:#c9a84c;letter-spacing:0.14em;text-transform:uppercase;font-weight:700;">Personal Assistance</p>
                     <p style="margin:0 0 8px;font-size:20px;color:#0f2847;font-weight:700;line-height:1.3;">We're Here to Help</p>
                     <p style="margin:0 0 24px;font-size:15px;color:#64748b;line-height:1.65;max-width:420px;margin-left:auto;margin-right:auto;">
-                      Have questions about getting started? Our team is ready to provide one-on-one support and guide you through the platform.
+                      Have questions about getting started? Reach out to our team on Facebook — your dedicated channel for support, sign-up assistance, and all platform inquiries.
                     </p>
                     <a href="{{facebook_link}}" target="_blank" style="display:inline-block;padding:15px 32px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;background:linear-gradient(135deg,#1a3d6b,#0f2847);border-radius:6px;letter-spacing:0.04em;box-shadow:0 2px 8px rgba(15,40,71,0.2);">
-                      Contact Us on Facebook
+                      Message Us on Facebook
                     </a>
                     <p style="margin:18px 0 0;font-size:13px;color:#94a3b8;line-height:1.6;">
-                      Or reply directly to this email &nbsp;&middot;&nbsp;
-                      <a href="{{website_link}}" style="color:#1a3d6b;text-decoration:none;font-weight:600;">Visit casinoroyalusa.com</a>
+                      All inquiries, support, and account assistance are handled exclusively through our Facebook page.
                     </p>
                   </td>
                 </tr>
@@ -231,11 +230,9 @@ export const CASINO_ROYAL_HTML = `<!DOCTYPE html>
                 <tr>
                   <td align="center">
                     <img src="${CASINO_ROYAL_IMAGES.logo}" alt="Casino Royal USA" width="110" style="display:block;margin:0 auto 18px;max-width:110px;height:auto;border:0;" />
-                    <p style="margin:0 0 10px;font-size:15px;font-weight:700;color:#ffffff;">Casino Royal USA</p>
+                    <p style="margin:0 0 16px;font-size:15px;font-weight:700;color:#ffffff;">Casino Royal USA</p>
                     <p style="margin:0 0 16px;font-size:13px;color:#94a8c4;line-height:1.6;">
-                      <a href="{{website_link}}" style="color:#c9d6e8;text-decoration:none;">casinoroyalusa.com</a>
-                      &nbsp;&middot;&nbsp;
-                      <span style="color:#c9d6e8;">{{contact_phone}}</span>
+                      <a href="{{facebook_link}}" style="color:#c9d6e8;text-decoration:none;font-weight:600;">Connect with us on Facebook</a>
                     </p>
                     <p style="margin:0 0 16px;font-size:12px;color:#6b8299;line-height:1.65;max-width:440px;margin-left:auto;margin-right:auto;">
                       Casino Royal USA is a social gaming platform for entertainment purposes only. Please play responsibly.
