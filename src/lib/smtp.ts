@@ -2,9 +2,15 @@ import nodemailer from "nodemailer";
 import type { SmtpProvider } from "@prisma/client";
 import {
   htmlToPlainText,
-  buildDeliverabilityHeaders,
-  wrapEmailHtml,
+  buildMarketingHeaders,
+  buildPrimaryHeaders,
+  wrapMarketingHtml,
+  wrapPrimaryHtml,
+  buildPlainTextPrimary,
+  buildPlainTextMarketing,
   sanitizeSubject,
+  getSenderName,
+  getDeliveryMode,
 } from "./deliverability";
 
 export function createTransporter(provider: SmtpProvider) {
@@ -27,7 +33,7 @@ export function createTransporter(provider: SmtpProvider) {
 }
 
 function injectTracking(html: string, trackingId: string, appUrl: string) {
-  const trackingPixel = `<img src="${appUrl}/api/track/open/${trackingId}" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0" />`;
+  const trackingPixel = `<img src="${appUrl}/api/track/open/${trackingId}" width="1" height="1" alt="" style="display:none" />`;
   const htmlWithPixel = html.includes("</body>")
     ? html.replace("</body>", `${trackingPixel}</body>`)
     : html + trackingPixel;
@@ -50,31 +56,53 @@ export async function sendEmail(params: {
   appUrl: string;
 }) {
   const transporter = createTransporter(params.provider);
+  const mode = getDeliveryMode();
+  const senderName = getSenderName(params.provider.fromName);
   const unsubscribeUrl = `${params.appUrl}/api/track/unsubscribe/${params.trackingId}`;
+  const subject = sanitizeSubject(params.subject, mode);
 
-  const wrappedHtml = wrapEmailHtml({
-    bodyHtml: params.html,
-    unsubscribeUrl,
-    fromName: params.provider.fromName,
-    fromEmail: params.provider.fromEmail,
-  });
+  let html: string;
+  let text: string;
+  let headers: Record<string, string>;
 
-  const html = injectTracking(wrappedHtml, params.trackingId, params.appUrl);
-  const text = htmlToPlainText(params.html) + `\n\nUnsubscribe: ${unsubscribeUrl}`;
-  const subject = sanitizeSubject(params.subject);
-
-  const info = await transporter.sendMail({
-    from: `"${params.provider.fromName}" <${params.provider.fromEmail}>`,
-    to: params.to,
-    subject,
-    html,
-    text,
-    replyTo: params.provider.fromEmail,
-    headers: buildDeliverabilityHeaders({
+  if (mode === "primary") {
+    // Personal 1-to-1 format → Gmail Primary tab
+    html = wrapPrimaryHtml({
+      bodyHtml: params.html,
+      fromName: senderName,
+      unsubscribeUrl,
+    });
+    text = buildPlainTextPrimary({ bodyHtml: params.html, fromName: senderName });
+    headers = buildPrimaryHeaders({ fromEmail: params.provider.fromEmail });
+    // No tracking pixel or link rewriting in primary mode (marketing signals)
+  } else {
+    const wrapped = wrapMarketingHtml({
+      bodyHtml: params.html,
+      unsubscribeUrl,
+      fromName: params.provider.fromName,
+      fromEmail: params.provider.fromEmail,
+    });
+    html = injectTracking(wrapped, params.trackingId, params.appUrl);
+    text = buildPlainTextMarketing({
+      bodyHtml: params.html,
+      fromName: params.provider.fromName,
+      unsubscribeUrl,
+    });
+    headers = buildMarketingHeaders({
       trackingId: params.trackingId,
       unsubscribeUrl,
       fromEmail: params.provider.fromEmail,
-    }),
+    });
+  }
+
+  const info = await transporter.sendMail({
+    from: `"${senderName}" <${params.provider.fromEmail}>`,
+    to: params.to,
+    subject,
+    text,
+    html,
+    replyTo: params.provider.fromEmail,
+    headers,
   });
 
   return info;
@@ -86,25 +114,21 @@ export async function sendTestEmail(params: {
   appUrl: string;
 }) {
   const transporter = createTransporter(params.provider);
+  const senderName = getSenderName(params.provider.fromName);
 
-  const html = wrapEmailHtml({
-    bodyHtml: `
-      <h2 style="color:#333;margin-top:0">SMTP Test Successful</h2>
-      <p>Your MailFlow email configuration is working correctly.</p>
-      <p>This is a deliverability-optimized test message with proper headers and plain-text fallback.</p>
-    `,
-    unsubscribeUrl: `${params.appUrl}`,
-    fromName: params.provider.fromName,
-    fromEmail: params.provider.fromEmail,
+  const html = wrapPrimaryHtml({
+    bodyHtml: `<p>Hi,</p><p>Just testing that emails are working correctly. Please reply if you see this.</p>`,
+    fromName: senderName,
+    unsubscribeUrl: params.appUrl,
   });
 
   return transporter.sendMail({
-    from: `"${params.provider.fromName}" <${params.provider.fromEmail}>`,
+    from: `"${senderName}" <${params.provider.fromEmail}>`,
     to: params.to,
-    subject: "MailFlow — Configuration Test",
-    html,
-    text: "Your MailFlow SMTP configuration is working correctly.",
+    subject: "Quick test",
+    text: "Hi,\n\nJust testing that emails are working correctly.\n\n" + senderName,
     replyTo: params.provider.fromEmail,
+    headers: buildPrimaryHeaders({ fromEmail: params.provider.fromEmail }),
   });
 }
 

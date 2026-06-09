@@ -280,6 +280,19 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      <Card className="border-primary/30">
+        <CardHeader>
+          <CardTitle className="text-lg">Primary Inbox Tips</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>1. Set <strong>From Name</strong> to your real name (e.g. &quot;Muhammad&quot;) — not &quot;MailFlow&quot;</p>
+          <p>2. Railway variable: <code>SMTP_SENDER_NAME=Muhammad</code></p>
+          <p>3. Railway variable: <code>EMAIL_DELIVERY_MODE=primary</code> (default)</p>
+          <p>4. Write emails like personal messages — no marketing language</p>
+          <p>5. Subject: simple text like &quot;Quick note&quot; not &quot;Hello Name - Offer&quot;</p>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Gmail Setup Guide</CardTitle>
