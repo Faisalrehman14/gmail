@@ -12,7 +12,7 @@ export interface PersonalizationData {
 function globalVars(trackingId?: string, appUrl?: string): Record<string, string> {
   const vars: Record<string, string> = {
     "{{facebook_link}}":
-      process.env.NEXT_PUBLIC_FACEBOOK_URL || "https://m.me/YourFacebookPage",
+      process.env.NEXT_PUBLIC_FACEBOOK_URL || "https://m.me/casinoroyalusa12",
     "{{website_link}}":
       process.env.NEXT_PUBLIC_WEBSITE_URL || "https://casinoroyalusa.com",
     "{{contact_phone}}":
