@@ -9,7 +9,7 @@ export const CASINO_ROYAL_IMAGES = {
   hero: `${BASE}/static/media/fallbackone.c8e866a7094201539221.jpg`,
 };
 
-export const CASINO_ROYAL_SUBJECT = "Discover Casino Royal USA — Premium Social Gaming";
+export const CASINO_ROYAL_SUBJECT = "Hello {{first_name}}";
 
 /** Inbox preview — excerpt from body copy (wording unchanged) */
 export const CASINO_ROYAL_PREHEADER =

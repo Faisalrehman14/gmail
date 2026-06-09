@@ -160,9 +160,21 @@ export function sanitizeSubject(subject: string, mode: DeliveryMode): string {
     .trim();
 
   if (mode === "primary") {
-    // Remove "Hello Name -" pattern that looks like marketing
-    s = s.replace(/^Hello\s+\S+\s*[-–—]\s*/i, "");
-    if (!s) s = "Following up";
+    // Strip bulk/marketing subject patterns that trigger Gmail Promotions tab
+    s = s
+      .replace(
+        /\b(Discover|Premium|Exclusive|Invite|Invitation|Social Gaming|Newsletter|Update|Announcement)\b/gi,
+        ""
+      )
+      .replace(/[-–—|]+\s*/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+
+    // "Hello Name - promo text" → keep only "Hello Name"
+    const helloMatch = s.match(/^(Hello\s+\S+)/i);
+    if (helloMatch) return helloMatch[1];
+
+    if (!s || s.length < 3) s = "Following up";
   }
 
   return s;
@@ -170,7 +182,14 @@ export function sanitizeSubject(subject: string, mode: DeliveryMode): string {
 
 /** Personal from name — use real person name not brand */
 export function getSenderName(providerFromName: string): string {
-  const brandNames = ["mailflow", "noreply", "no-reply", "newsletter", "marketing"];
+  const brandNames = [
+    "mailflow",
+    "noreply",
+    "no-reply",
+    "newsletter",
+    "marketing",
+    "casino royal",
+  ];
   const lower = providerFromName.toLowerCase();
   if (brandNames.some((b) => lower.includes(b))) {
     return process.env.SMTP_SENDER_NAME || "Muhammad";

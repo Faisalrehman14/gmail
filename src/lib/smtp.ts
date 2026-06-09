@@ -67,17 +67,24 @@ export async function sendEmail(params: {
 }) {
   const transporter = createTransporter(params.provider);
   const branded = isBrandedEmail(params.html);
-  const mode = branded ? "marketing" : getDeliveryMode();
+  const mode = getDeliveryMode();
   const senderName = getSenderName(params.provider.fromName);
   const unsubscribeUrl = `${params.appUrl}/api/track/unsubscribe/${params.trackingId}`;
-  const subject = sanitizeSubject(params.subject, branded ? "marketing" : mode);
+  const subject = sanitizeSubject(params.subject, mode);
 
   let html: string;
   let text: string;
   let headers: Record<string, string>;
 
-  if (branded) {
-    // Branded template — skip tracking by default (better inbox placement)
+  if (branded && mode === "primary") {
+    // Primary inbox: no tracking, no List-Unsubscribe header, personal plain text
+    html = params.html;
+    text = buildPlainTextPrimary({
+      bodyHtml: params.html,
+      fromName: senderName,
+    });
+    headers = buildPrimaryHeaders({ fromEmail: params.provider.fromEmail });
+  } else if (branded) {
     html = isTrackingEnabled()
       ? injectTracking(params.html, params.trackingId, params.appUrl)
       : params.html;
@@ -144,19 +151,30 @@ export async function sendTestEmail(params: {
   ).replace(/\{\{first_name\}\}/g, "there");
 
   const senderName = getSenderName(params.provider.fromName);
+  const mode = getDeliveryMode();
+  const subject = sanitizeSubject(
+    CASINO_ROYAL_SUBJECT.replace(/\{\{first_name\}\}/g, "there"),
+    mode
+  );
 
   return transporter.sendMail({
     from: `"${senderName}" <${params.provider.fromEmail}>`,
     to: params.to,
-    subject: sanitizeSubject(CASINO_ROYAL_SUBJECT, "marketing"),
-    text: buildPlainTextBranded(html, params.appUrl),
+    subject,
+    text:
+      mode === "primary"
+        ? buildPlainTextPrimary({ bodyHtml: html, fromName: senderName })
+        : buildPlainTextBranded(html, params.appUrl),
     html,
     replyTo: params.provider.fromEmail,
-    headers: buildMarketingHeaders({
-      trackingId: "test",
-      unsubscribeUrl: params.appUrl,
-      fromEmail: params.provider.fromEmail,
-    }),
+    headers:
+      mode === "primary"
+        ? buildPrimaryHeaders({ fromEmail: params.provider.fromEmail })
+        : buildMarketingHeaders({
+            trackingId: "test",
+            unsubscribeUrl: params.appUrl,
+            fromEmail: params.provider.fromEmail,
+          }),
   });
 }
 
