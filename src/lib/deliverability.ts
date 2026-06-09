@@ -19,18 +19,33 @@ export function htmlToPlainText(html: string): string {
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<\/div>/gi, "\n")
     .replace(/<\/h[1-6]>/gi, "\n\n")
-    .replace(/<a[^>]+href="([^"]*)"[^>]*>([^<]*)<\/a>/gi, "$2")
+    .replace(/<img[^>]+alt="([^"]*)"[^>]*>/gi, "[$1]")
+    .replace(/<a[^>]+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, url, label) => {
+      const text = label.replace(/<[^>]+>/g, "").trim();
+      return text ? `${text} (${url})` : url;
+    })
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
+    .replace(/&middot;/g, "·")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+/** Multipart plain-text part for branded HTML templates */
+export function buildPlainTextBranded(html: string, unsubscribeUrl: string): string {
+  return `${htmlToPlainText(html)}\n\n---\nUnsubscribe: ${unsubscribeUrl}`;
+}
+
+export function isTrackingEnabled(): boolean {
+  return process.env.EMAIL_TRACKING_ENABLED === "true";
 }
 
 /** Marketing headers — good for bulk platforms, triggers Promotions tab in Gmail */

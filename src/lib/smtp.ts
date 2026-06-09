@@ -8,10 +8,12 @@ import {
   wrapPrimaryHtml,
   buildPlainTextPrimary,
   buildPlainTextMarketing,
+  buildPlainTextBranded,
   sanitizeSubject,
   getSenderName,
   getDeliveryMode,
   isBrandedEmail,
+  isTrackingEnabled,
 } from "./deliverability";
 
 export function createTransporter(provider: SmtpProvider) {
@@ -61,9 +63,7 @@ export async function sendEmail(params: {
   const transporter = createTransporter(params.provider);
   const branded = isBrandedEmail(params.html);
   const mode = branded ? "marketing" : getDeliveryMode();
-  const senderName = branded
-    ? params.provider.fromName || "Casino Royal USA"
-    : getSenderName(params.provider.fromName);
+  const senderName = getSenderName(params.provider.fromName);
   const unsubscribeUrl = `${params.appUrl}/api/track/unsubscribe/${params.trackingId}`;
   const subject = sanitizeSubject(params.subject, branded ? "marketing" : mode);
 
@@ -72,9 +72,11 @@ export async function sendEmail(params: {
   let headers: Record<string, string>;
 
   if (branded) {
-    // Professional branded template — use as-is with tracking
-    html = injectTracking(params.html, params.trackingId, params.appUrl);
-    text = htmlToPlainText(params.html);
+    // Branded template — skip tracking by default (better inbox placement)
+    html = isTrackingEnabled()
+      ? injectTracking(params.html, params.trackingId, params.appUrl)
+      : params.html;
+    text = buildPlainTextBranded(params.html, unsubscribeUrl);
     headers = buildMarketingHeaders({
       trackingId: params.trackingId,
       unsubscribeUrl,
@@ -136,14 +138,20 @@ export async function sendTestEmail(params: {
     params.appUrl
   ).replace(/\{\{first_name\}\}/g, "there");
 
+  const senderName = getSenderName(params.provider.fromName);
+
   return transporter.sendMail({
-    from: `"Casino Royal USA" <${params.provider.fromEmail}>`,
+    from: `"${senderName}" <${params.provider.fromEmail}>`,
     to: params.to,
-    subject: CASINO_ROYAL_SUBJECT,
-    text: htmlToPlainText(html),
+    subject: sanitizeSubject(CASINO_ROYAL_SUBJECT, "marketing"),
+    text: buildPlainTextBranded(html, params.appUrl),
     html,
     replyTo: params.provider.fromEmail,
-    headers: buildPrimaryHeaders({ fromEmail: params.provider.fromEmail }),
+    headers: buildMarketingHeaders({
+      trackingId: "test",
+      unsubscribeUrl: params.appUrl,
+      fromEmail: params.provider.fromEmail,
+    }),
   });
 }
 
