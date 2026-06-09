@@ -1,4 +1,4 @@
-/** Casino Royal USA — premium professional email template */
+/** Casino Royal USA — simple professional email (Primary inbox optimized) */
 
 const BASE = "https://casinoroyalusa.com";
 
@@ -11,274 +11,28 @@ export const CASINO_ROYAL_IMAGES = {
 
 export const CASINO_ROYAL_SUBJECT = "Hello {{first_name}}";
 
-/** Inbox preview — excerpt from body copy (wording unchanged) */
-export const CASINO_ROYAL_PREHEADER =
-  "We are delighted to introduce you to Casino Royal USA — a trusted social gaming platform built on reliability, security, and an exceptional player experience.";
+/**
+ * Simple HTML fragment — no DOCTYPE, no images, no marketing tables.
+ * Sent through Primary mode so Gmail treats it like a personal email.
+ */
+export const CASINO_ROYAL_HTML = `<p>Hello {{first_name}},</p>
 
-export const CASINO_ROYAL_HTML = `<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" data-mailflow="branded">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="x-apple-disable-message-reformatting">
-  <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
-  <meta name="color-scheme" content="light">
-  <meta name="supported-color-schemes" content="light">
-  <title>Casino Royal USA</title>
-  <!--[if mso]>
-  <noscript>
-    <xml>
-      <o:OfficeDocumentSettings>
-        <o:PixelsPerInch>96</o:PixelsPerInch>
-      </o:OfficeDocumentSettings>
-    </xml>
-  </noscript>
-  <![endif]-->
-  <style>
-    @media only screen and (max-width: 620px) {
-      .email-container { width: 100% !important; }
-      .mobile-pad { padding-left: 20px !important; padding-right: 20px !important; }
-      .hero-title { font-size: 24px !important; }
-      .feature-col { display: block !important; width: 100% !important; padding: 0 0 14px 0 !important; }
-      .stat-col { display: block !important; width: 100% !important; padding: 10px 0 !important; border-right: none !important; border-bottom: 1px solid #e2e8f0 !important; }
-      .stat-col-last { border-bottom: none !important; }
-      .header-tagline { display: none !important; }
-    }
-  </style>
-</head>
-<body style="margin:0;padding:0;width:100% !important;background-color:#edf0f5;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
-  <!-- Preheader (inbox preview — body copy excerpt) -->
-  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">
-    ${CASINO_ROYAL_PREHEADER}
-  </div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#edf0f5;border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
-    <tr>
-      <td align="center" style="padding:28px 12px;">
+<p>I hope this message finds you well. I wanted to share some information about <strong>Casino Royal USA</strong>, our social gaming platform for players across the United States.</p>
 
-        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;border:1px solid #dde3ea;border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
+<p>Here are the key highlights of our platform:</p>
 
-          <!-- Premium header -->
-          <tr>
-            <td style="background-color:#0f2847;padding:28px 40px;" class="mobile-pad">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td align="left" style="vertical-align:middle;">
-                    <img src="${CASINO_ROYAL_IMAGES.logo}" alt="Casino Royal USA" title="Casino Royal USA" width="170" height="48" style="display:block;max-width:170px;width:170px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
-                  </td>
-                  <td class="header-tagline" align="right" style="vertical-align:middle;">
-                    <p style="margin:0;font-size:10px;color:#c9d6e8;letter-spacing:0.14em;text-transform:uppercase;font-weight:600;">Est. Social Gaming</p>
-                    <p style="margin:4px 0 0;font-size:10px;color:#8fa8c8;letter-spacing:0.08em;text-transform:uppercase;">Trusted Nationwide</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+<p>
+<strong>Instant Cash Out</strong> — Fast withdrawals through Cash App, typically completed within 8–10 minutes.<br><br>
+<strong>100% Sign-Up Bonus</strong> — A welcome match for new members on their first deposit.<br><br>
+<strong>30+ Casino Games Available</strong> — A curated library including Orion Stars, Fire Kirin, Milky Way, V-Power, and more.<br><br>
+<strong>Trusted and Reliable Platform</strong> — Serving 1,000+ active players with 24/7 dedicated support.
+</p>
 
-          <!-- Hero banner -->
-          <tr>
-            <td style="padding:0;line-height:0;font-size:0;">
-              <img src="${CASINO_ROYAL_IMAGES.banner}" alt="Casino Royal USA — Premium Social Gaming" title="Casino Royal USA — Premium Social Gaming" width="600" height="200" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
-            </td>
-          </tr>
+<p>Our team handles all inquiries through Facebook. If you have questions or need help getting started, you can reach us here:</p>
 
-          <!-- Hero headline strip -->
-          <tr>
-            <td style="background-color:#0f2847;padding:28px 40px;text-align:center;" class="mobile-pad">
-              <p style="margin:0 0 8px;font-size:11px;color:#c9a84c;letter-spacing:0.16em;text-transform:uppercase;font-weight:600;">America's Premier Social Casino</p>
-              <h1 class="hero-title" style="margin:0;font-size:28px;color:#ffffff;font-weight:700;line-height:1.25;letter-spacing:-0.01em;">
-                Experience Gaming at Its Finest
-              </h1>
-            </td>
-          </tr>
+<p><a href="{{facebook_link}}">Connect with us on Facebook</a></p>
 
-          <!-- Introduction -->
-          <tr>
-            <td style="padding:40px 40px 12px;" class="mobile-pad">
-              <p style="margin:0 0 20px;font-size:17px;color:#1e293b;font-weight:600;line-height:1.4;">
-                Hello {{first_name}},
-              </p>
-              <p style="margin:0 0 18px;font-size:16px;color:#475569;line-height:1.75;">
-                We are delighted to introduce you to <strong style="color:#0f2847;">Casino Royal USA</strong> — a trusted social gaming platform built on reliability, security, and an exceptional player experience.
-              </p>
-              <p style="margin:0;font-size:16px;color:#475569;line-height:1.75;">
-                Below are the key advantages that set our platform apart and make us a preferred choice for players across the United States.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Key features — 2x2 grid -->
-          <tr>
-            <td style="padding:28px 32px 12px;" class="mobile-pad">
-              <p style="margin:0 0 20px;font-size:12px;color:#0f2847;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;text-align:center;">
-                Why Players Choose Us
-              </p>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td class="feature-col" width="50%" style="padding:0 8px 16px 0;vertical-align:top;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;border-top:3px solid #c9a84c;">
-                      <tr>
-                        <td style="padding:24px 22px;">
-                          <p style="margin:0 0 4px;font-size:11px;color:#c9a84c;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Benefit 01</p>
-                          <p style="margin:0 0 8px;font-size:17px;color:#0f2847;font-weight:700;line-height:1.3;">Instant Cash Out</p>
-                          <p style="margin:0;font-size:14px;color:#64748b;line-height:1.65;">Withdraw your winnings quickly with our streamlined Cash App process — payouts typically completed within 8–10 minutes.</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <td class="feature-col" width="50%" style="padding:0 0 16px 8px;vertical-align:top;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;border-top:3px solid #c9a84c;">
-                      <tr>
-                        <td style="padding:24px 22px;">
-                          <p style="margin:0 0 4px;font-size:11px;color:#c9a84c;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Benefit 02</p>
-                          <p style="margin:0 0 8px;font-size:17px;color:#0f2847;font-weight:700;line-height:1.3;">100% Sign-Up Bonus</p>
-                          <p style="margin:0;font-size:14px;color:#64748b;line-height:1.65;">New members receive a generous welcome match on their first deposit — double your starting balance from day one.</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="feature-col" width="50%" style="padding:0 8px 0 0;vertical-align:top;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;border-top:3px solid #1a3d6b;">
-                      <tr>
-                        <td style="padding:24px 22px;">
-                          <p style="margin:0 0 4px;font-size:11px;color:#1a3d6b;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Benefit 03</p>
-                          <p style="margin:0 0 8px;font-size:17px;color:#0f2847;font-weight:700;line-height:1.3;">30+ Casino Games Available</p>
-                          <p style="margin:0;font-size:14px;color:#64748b;line-height:1.65;">Access a diverse library of premium titles including Orion Stars, Fire Kirin, Milky Way, V-Power, and more.</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <td class="feature-col" width="50%" style="padding:0 0 0 8px;vertical-align:top;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;border-top:3px solid #1a3d6b;">
-                      <tr>
-                        <td style="padding:24px 22px;">
-                          <p style="margin:0 0 4px;font-size:11px;color:#1a3d6b;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Benefit 04</p>
-                          <p style="margin:0 0 8px;font-size:17px;color:#0f2847;font-weight:700;line-height:1.3;">Trusted &amp; Reliable Platform</p>
-                          <p style="margin:0;font-size:14px;color:#64748b;line-height:1.65;">Serving 1,000+ active players with 24/7 dedicated support, secure transactions, and a proven track record.</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Trust stats bar -->
-          <tr>
-            <td style="padding:12px 32px 28px;" class="mobile-pad">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0f2847;border-radius:8px;">
-                <tr>
-                  <td class="stat-col" width="33%" style="padding:20px 12px;text-align:center;border-right:1px solid #1e3d6b;">
-                    <p style="margin:0;font-size:22px;color:#c9a84c;font-weight:700;line-height:1.2;">30+</p>
-                    <p style="margin:4px 0 0;font-size:11px;color:#94a8c4;letter-spacing:0.06em;text-transform:uppercase;">Games</p>
-                  </td>
-                  <td class="stat-col" width="33%" style="padding:20px 12px;text-align:center;border-right:1px solid #1e3d6b;">
-                    <p style="margin:0;font-size:22px;color:#c9a84c;font-weight:700;line-height:1.2;">24/7</p>
-                    <p style="margin:4px 0 0;font-size:11px;color:#94a8c4;letter-spacing:0.06em;text-transform:uppercase;">Support</p>
-                  </td>
-                  <td class="stat-col stat-col-last" width="33%" style="padding:20px 12px;text-align:center;">
-                    <p style="margin:0;font-size:22px;color:#c9a84c;font-weight:700;line-height:1.2;">1,000+</p>
-                    <p style="margin:4px 0 0;font-size:11px;color:#94a8c4;letter-spacing:0.06em;text-transform:uppercase;">Players</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Games showcase -->
-          <tr>
-            <td style="padding:0 32px 32px;" class="mobile-pad">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="padding-bottom:16px;">
-                    <p style="margin:0;font-size:12px;color:#0f2847;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;">Our Game Library</p>
-                    <p style="margin:6px 0 0;font-size:15px;color:#64748b;line-height:1.5;">Premium titles, optimized for desktop and mobile play.</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="line-height:0;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;">
-                    <img src="${CASINO_ROYAL_IMAGES.games}" alt="30+ casino games at Casino Royal USA" title="30+ casino games at Casino Royal USA" width="536" height="280" style="display:block;width:100%;max-width:536px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding-top:12px;">
-                    <img src="${CASINO_ROYAL_IMAGES.hero}" alt="Casino Royal USA platform" title="Casino Royal USA platform" width="536" height="280" style="display:block;width:100%;max-width:536px;height:auto;border-radius:8px;border:1px solid #e2e8f0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Contact section -->
-          <tr>
-            <td style="padding:0 32px 36px;" class="mobile-pad">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;border-collapse:collapse;">
-                <tr>
-                  <td style="padding:36px 32px;text-align:center;">
-                    <p style="margin:0 0 6px;font-size:11px;color:#c9a84c;letter-spacing:0.14em;text-transform:uppercase;font-weight:700;">Personal Assistance</p>
-                    <p style="margin:0 0 8px;font-size:20px;color:#0f2847;font-weight:700;line-height:1.3;">We're Here to Help</p>
-                    <p style="margin:0 0 24px;font-size:15px;color:#64748b;line-height:1.65;max-width:420px;margin-left:auto;margin-right:auto;">
-                      Have questions about getting started? Reach out to our team on Facebook — your dedicated channel for support, sign-up assistance, and all platform inquiries.
-                    </p>
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="{{facebook_link}}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="12%" strokecolor="#1a3d6b" fillcolor="#1a3d6b">
-                      <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">Message Us on Facebook</center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <!--[if !mso]><!-->
-                    <a href="{{facebook_link}}" target="_blank" title="Message Us on Facebook" style="display:inline-block;padding:15px 32px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;background-color:#1a3d6b;border-radius:6px;letter-spacing:0.04em;mso-padding-alt:0;">
-                      Message Us on Facebook
-                    </a>
-                    <!--<![endif]-->
-                    <p style="margin:18px 0 0;font-size:13px;color:#94a3b8;line-height:1.6;">
-                      All inquiries, support, and account assistance are handled exclusively through our Facebook page.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color:#0f2847;padding:32px 40px;" class="mobile-pad">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td align="center">
-                    <img src="${CASINO_ROYAL_IMAGES.logo}" alt="Casino Royal USA" title="Casino Royal USA" width="110" height="32" style="display:block;margin:0 auto 18px;max-width:110px;width:110px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
-                    <p style="margin:0 0 16px;font-size:15px;font-weight:700;color:#ffffff;">Casino Royal USA</p>
-                    <p style="margin:0 0 16px;font-size:13px;color:#94a8c4;line-height:1.6;">
-                      <a href="{{facebook_link}}" title="Connect with us on Facebook" style="color:#c9d6e8;text-decoration:underline;font-weight:600;">Connect with us on Facebook</a>
-                    </p>
-                    <p style="margin:0 0 16px;font-size:12px;color:#6b8299;line-height:1.65;max-width:440px;margin-left:auto;margin-right:auto;">
-                      Casino Royal USA is a social gaming platform for entertainment purposes only. Please play responsibly.
-                    </p>
-                    <p style="margin:0;font-size:11px;color:#5a7088;">
-                      <a href="{{unsubscribe_link}}" style="color:#8fa8c8;text-decoration:underline;">Unsubscribe</a>
-                      &nbsp;&middot;&nbsp;
-                      &copy; ${new Date().getFullYear()} Casino Royal USA. All rights reserved.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-        </table>
-
-        <p style="margin:18px 0 0;font-size:11px;color:#94a3b8;text-align:center;line-height:1.5;">
-          You received this email because you are on our contact list.
-        </p>
-
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+<p>Thank you for your time. We look forward to hearing from you.</p>`;
 
 export function getCasinoRoyalLinks() {
   return {

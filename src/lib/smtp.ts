@@ -147,36 +147,30 @@ export async function sendTestEmail(params: {
     "./templates/casino-royal"
   );
 
+  const senderName = getSenderName(params.provider.fromName);
+  const unsubscribeUrl = `${params.appUrl}/api/track/unsubscribe/test`;
   const html = CASINO_ROYAL_HTML.replace(
     /\{\{unsubscribe_link\}\}/g,
-    params.appUrl
+    unsubscribeUrl
   ).replace(/\{\{first_name\}\}/g, "there");
-
-  const senderName = getSenderName(params.provider.fromName);
-  const mode = getDeliveryMode();
   const subject = sanitizeSubject(
     CASINO_ROYAL_SUBJECT.replace(/\{\{first_name\}\}/g, "there"),
-    mode
+    "primary"
   );
+  const wrappedHtml = wrapPrimaryHtml({
+    bodyHtml: html,
+    fromName: senderName,
+    unsubscribeUrl,
+  });
 
   return transporter.sendMail({
     from: `"${senderName}" <${params.provider.fromEmail}>`,
     to: params.to,
     subject,
-    text:
-      mode === "primary"
-        ? buildPlainTextPrimary({ bodyHtml: html, fromName: senderName })
-        : buildPlainTextBranded(html, params.appUrl),
-    html,
+    text: buildPlainTextPrimary({ bodyHtml: html, fromName: senderName }),
+    html: wrappedHtml,
     replyTo: params.provider.fromEmail,
-    headers:
-      mode === "primary"
-        ? buildPrimaryHeaders({ fromEmail: params.provider.fromEmail })
-        : buildMarketingHeaders({
-            trackingId: "test",
-            unsubscribeUrl: params.appUrl,
-            fromEmail: params.provider.fromEmail,
-          }),
+    headers: buildPrimaryHeaders({ fromEmail: params.provider.fromEmail }),
   });
 }
 

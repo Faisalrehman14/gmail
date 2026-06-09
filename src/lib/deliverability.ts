@@ -130,6 +130,9 @@ export function wrapPrimaryHtml(params: {
   return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;line-height:1.6;max-width:600px;">
 ${body}
 <p style="margin-top:24px;color:#222;">${params.fromName}</p>
+<p style="margin-top:16px;font-size:12px;color:#888;">
+  <a href="${params.unsubscribeUrl}" style="color:#888;">Unsubscribe</a>
+</p>
 </div>`;
 }
 
