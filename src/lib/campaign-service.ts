@@ -198,13 +198,19 @@ async function processSingleEmail(email: EmailWithRelations) {
   });
 
   try {
+    const personalizeExtras = {
+      trackingId: email.trackingId,
+      appUrl: APP_URL,
+    };
     const personalizedHtml = personalizeContent(
       email.campaign.htmlContent,
-      email.contact
+      email.contact,
+      personalizeExtras
     );
     const personalizedSubject = personalizeContent(
       email.campaign.subject,
-      email.contact
+      email.contact,
+      personalizeExtras
     );
 
     await sendEmail({

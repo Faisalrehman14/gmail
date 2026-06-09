@@ -9,8 +9,8 @@ export interface PersonalizationData {
   customFields?: string | null;
 }
 
-function globalVars(): Record<string, string> {
-  return {
+function globalVars(trackingId?: string, appUrl?: string): Record<string, string> {
+  const vars: Record<string, string> = {
     "{{facebook_link}}":
       process.env.NEXT_PUBLIC_FACEBOOK_URL || "https://m.me/YourFacebookPage",
     "{{website_link}}":
@@ -18,6 +18,10 @@ function globalVars(): Record<string, string> {
     "{{contact_phone}}":
       process.env.NEXT_PUBLIC_CONTACT_PHONE || "+917080849048",
   };
+  if (trackingId && appUrl) {
+    vars["{{unsubscribe_link}}"] = `${appUrl}/api/track/unsubscribe/${trackingId}`;
+  }
+  return vars;
 }
 
 const VARIABLE_MAP: Record<string, (d: PersonalizationData) => string> = {
@@ -33,7 +37,8 @@ const VARIABLE_MAP: Record<string, (d: PersonalizationData) => string> = {
 
 export function personalizeContent(
   content: string,
-  data: PersonalizationData
+  data: PersonalizationData,
+  extras?: { trackingId?: string; appUrl?: string }
 ): string {
   let result = content;
   const custom = parseCustomFields(data.customFields);
@@ -42,7 +47,9 @@ export function personalizeContent(
     result = result.split(key).join(resolver(data));
   }
 
-  for (const [key, value] of Object.entries(globalVars())) {
+  for (const [key, value] of Object.entries(
+    globalVars(extras?.trackingId, extras?.appUrl)
+  )) {
     result = result.split(key).join(value);
   }
 
@@ -63,4 +70,5 @@ export const PERSONALIZATION_VARIABLES = [
   { key: "{{facebook_link}}", label: "Facebook Messenger" },
   { key: "{{website_link}}", label: "Website URL" },
   { key: "{{contact_phone}}", label: "Contact Phone" },
+  { key: "{{unsubscribe_link}}", label: "Unsubscribe Link" },
 ];

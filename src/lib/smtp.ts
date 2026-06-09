@@ -11,6 +11,7 @@ import {
   sanitizeSubject,
   getSenderName,
   getDeliveryMode,
+  isBrandedEmail,
 } from "./deliverability";
 
 export function createTransporter(provider: SmtpProvider) {
@@ -33,7 +34,7 @@ export function createTransporter(provider: SmtpProvider) {
 }
 
 function injectTracking(html: string, trackingId: string, appUrl: string) {
-  const trackingPixel = `<img src="${appUrl}/api/track/open/${trackingId}" width="1" height="1" alt="" style="display:none" />`;
+  const trackingPixel = `<img src="${appUrl}/api/track/open/${trackingId}" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;" />`;
   const htmlWithPixel = html.includes("</body>")
     ? html.replace("</body>", `${trackingPixel}</body>`)
     : html + trackingPixel;
@@ -41,7 +42,9 @@ function injectTracking(html: string, trackingId: string, appUrl: string) {
   return htmlWithPixel.replace(
     /href="(https?:\/\/[^"]+)"/gi,
     (match, url) => {
-      if (url.includes("/api/track/")) return match;
+      if (url.includes("/api/track/") || url.includes("casinoroyalusa.com/static/")) {
+        return match;
+      }
       return `href="${appUrl}/api/track/click/${trackingId}?url=${encodeURIComponent(url)}"`;
     }
   );
@@ -56,17 +59,28 @@ export async function sendEmail(params: {
   appUrl: string;
 }) {
   const transporter = createTransporter(params.provider);
-  const mode = getDeliveryMode();
-  const senderName = getSenderName(params.provider.fromName);
+  const branded = isBrandedEmail(params.html);
+  const mode = branded ? "marketing" : getDeliveryMode();
+  const senderName = branded
+    ? params.provider.fromName || "Casino Royal USA"
+    : getSenderName(params.provider.fromName);
   const unsubscribeUrl = `${params.appUrl}/api/track/unsubscribe/${params.trackingId}`;
-  const subject = sanitizeSubject(params.subject, mode);
+  const subject = sanitizeSubject(params.subject, branded ? "marketing" : mode);
 
   let html: string;
   let text: string;
   let headers: Record<string, string>;
 
-  if (mode === "primary") {
-    // Personal 1-to-1 format → Gmail Primary tab
+  if (branded) {
+    // Professional branded template — use as-is with tracking
+    html = injectTracking(params.html, params.trackingId, params.appUrl);
+    text = htmlToPlainText(params.html);
+    headers = buildMarketingHeaders({
+      trackingId: params.trackingId,
+      unsubscribeUrl,
+      fromEmail: params.provider.fromEmail,
+    });
+  } else if (mode === "primary") {
     html = wrapPrimaryHtml({
       bodyHtml: params.html,
       fromName: senderName,
@@ -74,7 +88,6 @@ export async function sendEmail(params: {
     });
     text = buildPlainTextPrimary({ bodyHtml: params.html, fromName: senderName });
     headers = buildPrimaryHeaders({ fromEmail: params.provider.fromEmail });
-    // No tracking pixel or link rewriting in primary mode (marketing signals)
   } else {
     const wrapped = wrapMarketingHtml({
       bodyHtml: params.html,
@@ -114,19 +127,21 @@ export async function sendTestEmail(params: {
   appUrl: string;
 }) {
   const transporter = createTransporter(params.provider);
-  const senderName = getSenderName(params.provider.fromName);
+  const { CASINO_ROYAL_HTML, CASINO_ROYAL_SUBJECT } = await import(
+    "./templates/casino-royal"
+  );
 
-  const html = wrapPrimaryHtml({
-    bodyHtml: `<p>Hi,</p><p>Just testing that emails are working correctly. Please reply if you see this.</p>`,
-    fromName: senderName,
-    unsubscribeUrl: params.appUrl,
-  });
+  const html = CASINO_ROYAL_HTML.replace(
+    /\{\{unsubscribe_link\}\}/g,
+    params.appUrl
+  ).replace(/\{\{first_name\}\}/g, "there");
 
   return transporter.sendMail({
-    from: `"${senderName}" <${params.provider.fromEmail}>`,
+    from: `"Casino Royal USA" <${params.provider.fromEmail}>`,
     to: params.to,
-    subject: "Quick test",
-    text: "Hi,\n\nJust testing that emails are working correctly.\n\n" + senderName,
+    subject: CASINO_ROYAL_SUBJECT,
+    text: htmlToPlainText(html),
+    html,
     replyTo: params.provider.fromEmail,
     headers: buildPrimaryHeaders({ fromEmail: params.provider.fromEmail }),
   });

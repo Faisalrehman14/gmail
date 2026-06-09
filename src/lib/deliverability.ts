@@ -7,6 +7,14 @@ export function getDeliveryMode(): DeliveryMode {
   return mode === "marketing" ? "marketing" : "primary";
 }
 
+/** Full branded HTML templates (logo, banners) — sent as-is */
+export function isBrandedEmail(html: string): boolean {
+  return (
+    html.includes('data-mailflow="branded"') ||
+    html.trim().startsWith("<!DOCTYPE")
+  );
+}
+
 export function htmlToPlainText(html: string): string {
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
