@@ -14,6 +14,7 @@ import {
   getDeliveryMode,
   isBrandedEmail,
   isTrackingEnabled,
+  prepareBrandedForPrimary,
 } from "./deliverability";
 
 export function createTransporter(provider: SmtpProvider) {
@@ -78,9 +79,10 @@ export async function sendEmail(params: {
 
   if (branded && mode === "primary") {
     // Primary inbox: no tracking, no List-Unsubscribe header, personal plain text
-    html = params.html;
+    const primaryHtml = prepareBrandedForPrimary(params.html);
+    html = primaryHtml;
     text = buildPlainTextPrimary({
-      bodyHtml: params.html,
+      bodyHtml: primaryHtml,
       fromName: senderName,
     });
     headers = buildPrimaryHeaders({ fromEmail: params.provider.fromEmail });

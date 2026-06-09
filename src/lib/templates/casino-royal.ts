@@ -51,7 +51,6 @@ export const CASINO_ROYAL_HTML = `<!DOCTYPE html>
   <!-- Preheader (inbox preview — body copy excerpt) -->
   <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">
     ${CASINO_ROYAL_PREHEADER}
-    &#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
   </div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#edf0f5;border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
     <tr>

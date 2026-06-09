@@ -48,6 +48,15 @@ export function isTrackingEnabled(): boolean {
   return process.env.EMAIL_TRACKING_ENABLED === "true";
 }
 
+/** Reduce spam signals for Primary-mode branded sends (wording unchanged) */
+export function prepareBrandedForPrimary(html: string): string {
+  let result = html;
+  if (process.env.EMAIL_STRIP_IMAGES_IN_PRIMARY === "true") {
+    result = result.replace(/<img[^>]*>/gi, "");
+  }
+  return result;
+}
+
 /** Marketing headers — good for bulk platforms, triggers Promotions tab in Gmail */
 export function buildMarketingHeaders(params: {
   trackingId: string;
