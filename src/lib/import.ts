@@ -45,24 +45,46 @@ function normalizeHeader(header: string): string {
   return FIELD_ALIASES[key] || key;
 }
 
+function isValidEmailString(value: string): boolean {
+  return validateEmail(value.trim()).isValid;
+}
+
+/** Find email anywhere in a row (handles missing headers & single-column sheets) */
+function findEmailInRow(row: Record<string, string>): string | null {
+  const normalized: Record<string, string> = {};
+  for (const [key, value] of Object.entries(row)) {
+    const field = normalizeHeader(key);
+    if (value?.trim()) normalized[field] = value.trim();
+    // Column header itself might be an email (headerless export treated as header)
+    if (isValidEmailString(key)) return validateEmail(key.trim()).email;
+  }
+
+  if (normalized.email && isValidEmailString(normalized.email)) {
+    return validateEmail(normalized.email).email;
+  }
+
+  // Scan all cell values for a valid email
+  for (const value of Object.values(row)) {
+    if (value?.trim() && isValidEmailString(value)) {
+      return validateEmail(value.trim()).email;
+    }
+  }
+
+  return null;
+}
+
 function rowToContact(row: Record<string, string>): ImportedContact | null {
+  const email = findEmailInRow(row);
+  if (!email) return null;
+
   const normalized: Record<string, string> = {};
   for (const [key, value] of Object.entries(row)) {
     const field = normalizeHeader(key);
     if (value?.trim()) normalized[field] = value.trim();
   }
 
-  const email = normalized.email;
-  if (!email) return null;
-
   const validation = validateEmail(email);
-  const standardFields = new Set([
-    "email",
-    "firstName",
-    "lastName",
-    "company",
-    "phone",
-  ]);
+  const standardFields = new Set(["email", "firstName", "lastName", "company", "phone"]);
   const customFields: Record<string, string> = {};
   for (const [key, value] of Object.entries(normalized)) {
     if (!standardFields.has(key)) customFields[key] = value;
@@ -74,44 +96,87 @@ function rowToContact(row: Record<string, string>): ImportedContact | null {
     lastName: normalized.lastName,
     company: normalized.company,
     phone: normalized.phone,
-    customFields:
-      Object.keys(customFields).length > 0 ? customFields : undefined,
+    customFields: Object.keys(customFields).length > 0 ? customFields : undefined,
     isValid: validation.isValid,
   };
 }
 
+function parsePlainEmailList(cells: string[]): ImportedContact[] {
+  const results: ImportedContact[] = [];
+  const seen = new Set<string>();
+
+  for (const cell of cells) {
+    const trimmed = cell?.toString().trim();
+    if (!trimmed) continue;
+
+    // Handle comma/semicolon separated in one cell
+    const parts = trimmed.split(/[,;\s]+/).filter(Boolean);
+    for (const part of parts) {
+      const validation = validateEmail(part);
+      if (validation.isValid && !seen.has(validation.email)) {
+        seen.add(validation.email);
+        results.push({ email: validation.email, isValid: true });
+      }
+    }
+  }
+
+  return results;
+}
+
 export function parseCSV(content: string): ImportedContact[] {
+  const lines = content.split(/\r?\n/).filter((l) => l.trim());
+  const firstLine = lines[0]?.trim() || "";
+
+  // No header row — first line is already an email
+  if (isValidEmailString(firstLine.split(/[,;\t]/)[0] || "")) {
+    return parsePlainEmailList(lines);
+  }
+
   const result = Papa.parse<Record<string, string>>(content, {
     header: true,
     skipEmptyLines: true,
   });
-  return result.data
+
+  const contacts = result.data
     .map(rowToContact)
     .filter((c): c is ImportedContact => c !== null);
+
+  if (contacts.length === 0) {
+    return parsePlainEmailList(lines);
+  }
+
+  return contacts;
 }
 
 export function parseTXT(content: string): ImportedContact[] {
   const lines = content.split(/\r?\n/).filter((l) => l.trim());
-  return lines
-    .map((line) => {
-      const email = line.split(/[,;\t]/)[0]?.trim();
-      if (!email) return null;
-      const validation = validateEmail(email);
-      return {
-        email: validation.email,
-        isValid: validation.isValid,
-      } as ImportedContact;
-    })
-    .filter((c): c is ImportedContact => c !== null);
+  return parsePlainEmailList(lines.map((l) => l.split(/[,;\t]/)[0] || ""));
 }
 
 export function parseExcel(buffer: ArrayBuffer): ImportedContact[] {
   const workbook = XLSX.read(buffer, { type: "array" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+  // Try with headers first
   const rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet);
-  return rows
+  const withHeaders = rows
     .map(rowToContact)
     .filter((c): c is ImportedContact => c !== null);
+
+  if (withHeaders.length > 0) return withHeaders;
+
+  // No headers — plain list (Google Sheets export with just emails in column A)
+  const rawRows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "" });
+  const allCells: string[] = [];
+
+  for (const row of rawRows) {
+    if (!Array.isArray(row)) continue;
+    for (const cell of row) {
+      if (cell?.toString().trim()) allCells.push(cell.toString().trim());
+    }
+  }
+
+  return parsePlainEmailList(allCells);
 }
 
 export function parseFile(
@@ -121,7 +186,6 @@ export function parseFile(
   const ext = filename.split(".").pop()?.toLowerCase();
   if (ext === "csv") return parseCSV(content as string);
   if (ext === "txt") return parseTXT(content as string);
-  if (ext === "xlsx" || ext === "xls")
-    return parseExcel(content as ArrayBuffer);
+  if (ext === "xlsx" || ext === "xls") return parseExcel(content as ArrayBuffer);
   throw new Error(`Unsupported file type: ${ext}`);
 }
