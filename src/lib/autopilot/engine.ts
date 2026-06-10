@@ -292,7 +292,21 @@ export async function unblockAutopilotCampaign(campaignId: string) {
     },
   });
 
+  await prisma.campaignEmail.updateMany({
+    where: {
+      campaignId,
+      status: { in: ["FAILED", "SENDING"] },
+    },
+    data: {
+      status: "QUEUED",
+      errorMessage: null,
+      nextRetryAt: null,
+      retryCount: 0,
+    },
+  });
+
   const { processEmailQueue } = await import("../campaign-service");
+  await processEmailQueue();
   await processEmailQueue();
 
   return config;

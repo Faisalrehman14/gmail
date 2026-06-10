@@ -171,6 +171,8 @@ export async function getCampaignLiveMonitor(campaignId: string) {
       ? {
           canSend: autopilot.rateLimit?.canSend ?? true,
           blockReason: autopilot.rateLimit?.reason,
+          paused: autopilot.autopilot?.paused ?? false,
+          pauseReason: autopilot.autopilot?.pauseReason,
           sentToday: autopilot.autopilot?.stats.sentToday,
           dailyLimit: autopilot.autopilot?.dailyLimit,
         }

@@ -54,6 +54,8 @@ interface LiveData {
   autopilot: {
     canSend: boolean;
     blockReason?: string;
+    paused?: boolean;
+    pauseReason?: string;
     sentToday?: number;
     dailyLimit?: number;
   } | null;
@@ -89,13 +91,18 @@ export function LiveMonitor({ campaignId, isActive }: { campaignId: string; isAc
   const [loading, setLoading] = useState(true);
 
   const fetchLive = useCallback(async () => {
-    const res = await fetch(`/api/campaigns/${campaignId}/live`);
-    const json = await res.json();
+    const [liveRes] = await Promise.all([
+      fetch(`/api/campaigns/${campaignId}/live`),
+      isActive
+        ? fetch("/api/worker", { method: "POST" }).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+    const json = await liveRes.json();
     if (json.success) {
       setData(json.data);
     }
     setLoading(false);
-  }, [campaignId]);
+  }, [campaignId, isActive]);
 
   useEffect(() => {
     fetchLive();
@@ -174,6 +181,11 @@ export function LiveMonitor({ campaignId, isActive }: { campaignId: string; isAc
             </div>
           </div>
 
+          {data.autopilot?.paused && data.autopilot.pauseReason && (
+            <p className="text-sm text-destructive">
+              Paused: {data.autopilot.pauseReason}
+            </p>
+          )}
           {data.autopilot && !data.autopilot.canSend && data.autopilot.blockReason && (
             <p className="text-sm text-amber-700 dark:text-amber-300">
               ⏸ {data.autopilot.blockReason}

@@ -116,8 +116,20 @@ async function recordAutopilotSend(campaignId: string, autopilotConfig: string) 
 export async function processEmailQueue() {
   const now = new Date();
 
+  // Unstick emails left in SENDING after a crash or timeout
+  await prisma.campaignEmail.updateMany({
+    where: {
+      status: "SENDING",
+      updatedAt: { lt: new Date(Date.now() - 2 * 60_000) },
+    },
+    data: { status: "QUEUED" },
+  });
+
   const queued = await prisma.campaignEmail.findMany({
-    where: { status: "QUEUED" },
+    where: {
+      status: "QUEUED",
+      OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
+    },
     take: BATCH_SIZE * 3,
     include: {
       contact: true,
