@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 import type { SmtpProvider } from "@prisma/client";
 import {
   htmlToPlainText,
@@ -16,9 +17,44 @@ import {
   isTrackingEnabled,
   prepareBrandedForPrimary,
 } from "./deliverability";
+import { getProviderLimits } from "./autopilot/provider-limits";
 
-export function createTransporter(provider: SmtpProvider) {
-  return nodemailer.createTransport({
+const transporterCache = new Map<string, Transporter>();
+
+function isGmailHost(host: string): boolean {
+  return host.toLowerCase().includes("gmail");
+}
+
+export function isLoginRateLimitError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("too many login attempts") ||
+    lower.includes("454 4.7.0") ||
+    lower.includes("421 4.7.0") ||
+    lower.includes("rate limit exceeded")
+  );
+}
+
+export function clearTransporterCache(providerId?: string) {
+  if (providerId) {
+    const t = transporterCache.get(providerId);
+    if (t) t.close();
+    transporterCache.delete(providerId);
+  } else {
+    for (const t of transporterCache.values()) t.close();
+    transporterCache.clear();
+  }
+}
+
+/** Reuse one pooled SMTP connection — avoids Gmail "too many login attempts" */
+export function getTransporter(provider: SmtpProvider): Transporter {
+  const cached = transporterCache.get(provider.id);
+  if (cached) return cached;
+
+  const limits = getProviderLimits(provider.host, provider.name);
+  const gmail = isGmailHost(provider.host);
+
+  const transporter = nodemailer.createTransport({
     host: provider.host,
     port: provider.port,
     secure: provider.secure,
@@ -26,6 +62,11 @@ export function createTransporter(provider: SmtpProvider) {
       user: provider.username,
       pass: provider.password,
     },
+    pool: true,
+    maxConnections: 1,
+    maxMessages: gmail ? 100 : 500,
+    rateDelta: gmail ? 60_000 : 10_000,
+    rateLimit: gmail ? Math.max(1, Math.floor(60_000 / limits.minDelayMs)) : 10,
     tls: {
       minVersion: "TLSv1.2",
       rejectUnauthorized: process.env.NODE_ENV === "production",
@@ -34,6 +75,13 @@ export function createTransporter(provider: SmtpProvider) {
     greetingTimeout: 30_000,
     socketTimeout: 60_000,
   });
+
+  transporterCache.set(provider.id, transporter);
+  return transporter;
+}
+
+export function createTransporter(provider: SmtpProvider) {
+  return getTransporter(provider);
 }
 
 function injectTracking(html: string, trackingId: string, appUrl: string) {
@@ -65,8 +113,9 @@ export async function sendEmail(params: {
   html: string;
   trackingId: string;
   appUrl: string;
+  transporter?: Transporter;
 }) {
-  const transporter = createTransporter(params.provider);
+  const transporter = params.transporter ?? getTransporter(params.provider);
   const branded = isBrandedEmail(params.html);
   const mode = getDeliveryMode();
   const senderName = getSenderName(params.provider.fromName);
@@ -78,7 +127,6 @@ export async function sendEmail(params: {
   let headers: Record<string, string>;
 
   if (branded && mode === "primary") {
-    // Primary inbox: no tracking, no List-Unsubscribe header, personal plain text
     const primaryHtml = prepareBrandedForPrimary(params.html);
     html = primaryHtml;
     text = buildPlainTextPrimary({
@@ -124,17 +172,24 @@ export async function sendEmail(params: {
     });
   }
 
-  const info = await transporter.sendMail({
-    from: `"${senderName}" <${params.provider.fromEmail}>`,
-    to: params.to,
-    subject,
-    text,
-    html,
-    replyTo: params.provider.fromEmail,
-    headers,
-  });
-
-  return info;
+  try {
+    const info = await transporter.sendMail({
+      from: `"${senderName}" <${params.provider.fromEmail}>`,
+      to: params.to,
+      subject,
+      text,
+      html,
+      replyTo: params.provider.fromEmail,
+      headers,
+    });
+    return info;
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (isLoginRateLimitError(msg)) {
+      clearTransporterCache(params.provider.id);
+    }
+    throw error;
+  }
 }
 
 export async function sendTestEmail(params: {
@@ -142,7 +197,7 @@ export async function sendTestEmail(params: {
   to: string;
   appUrl: string;
 }) {
-  const transporter = createTransporter(params.provider);
+  const transporter = getTransporter(params.provider);
   const { CASINO_ROYAL_HTML, CASINO_ROYAL_SUBJECT } = await import(
     "./templates/casino-royal"
   );
@@ -175,7 +230,7 @@ export async function sendTestEmail(params: {
 }
 
 export async function testSmtpConnection(provider: SmtpProvider): Promise<boolean> {
-  const transporter = createTransporter(provider);
+  const transporter = getTransporter(provider);
   await transporter.verify();
   return true;
 }

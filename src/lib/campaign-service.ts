@@ -1,7 +1,7 @@
 import type { SmtpProvider, CampaignMode } from "@prisma/client";
 import { prisma } from "./prisma";
 import { personalizeContent } from "./personalization";
-import { sendEmail } from "./smtp";
+import { sendEmail, getTransporter, isLoginRateLimitError, clearTransporterCache } from "./smtp";
 import { logActivity } from "./activity";
 import { createNotification } from "./notifications";
 import {
@@ -12,7 +12,7 @@ import { checkRateLimit, recordSend } from "./autopilot/rate-limiter";
 import { getProviderLimits } from "./autopilot/provider-limits";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 5;
 
 export async function queueCampaignEmails(campaignId: string) {
   const campaign = await prisma.campaign.findUnique({
@@ -155,20 +155,37 @@ export async function processEmailQueue() {
     toProcess.push(email as EmailWithRelations);
   }
 
-  for (const email of toProcess) {
-    const provider = email.campaign.smtpProvider;
-    const limits = provider
-      ? getProviderLimits(provider.host, provider.name)
-      : getProviderLimits("default");
+  const transporterByProvider = new Map<string, ReturnType<typeof getTransporter>>();
 
-    await processSingleEmail(email);
+  for (const email of toProcess) {
+    const provider =
+      email.campaign.smtpProvider ||
+      (await prisma.smtpProvider.findFirst({
+        where: { isDefault: true, isActive: true },
+      }));
+
+    if (!provider) continue;
+
+    const limits = getProviderLimits(provider.host, provider.name);
+    if (!transporterByProvider.has(provider.id)) {
+      transporterByProvider.set(provider.id, getTransporter(provider));
+    }
+
+    const result = await processSingleEmail(
+      email,
+      transporterByProvider.get(provider.id)!
+    );
+
+    if (result.loginRateLimited) {
+      await pauseCampaignForLoginLimit(email.campaign.id, email.campaign.autopilotConfig);
+      break;
+    }
 
     if (email.campaign.mode === "AUTOPILOT" && email.campaign.autopilotConfig) {
       await recordAutopilotSend(email.campaign.id, email.campaign.autopilotConfig);
       await checkBounceAndPause(email.campaign.id);
     }
 
-    // Throttle between sends for deliverability
     if (limits.minDelayMs > 0) {
       await new Promise((r) => setTimeout(r, limits.minDelayMs));
     }
@@ -177,7 +194,42 @@ export async function processEmailQueue() {
   await updateCampaignStatuses();
 }
 
-async function processSingleEmail(email: EmailWithRelations) {
+async function pauseCampaignForLoginLimit(
+  campaignId: string,
+  autopilotConfig: string | null
+) {
+  clearTransporterCache();
+  const resumeAt = new Date(Date.now() + 30 * 60_000);
+
+  if (autopilotConfig) {
+    const config = parseAutopilotConfig(autopilotConfig);
+    if (config) {
+      config.paused = true;
+      config.pauseReason =
+        "Gmail login limit reached — auto-resumes in 30 minutes. Wait before retrying.";
+      await prisma.campaign.update({
+        where: { id: campaignId },
+        data: { status: "PAUSED", autopilotConfig: JSON.stringify(config) },
+      });
+      return;
+    }
+  }
+
+  await prisma.campaign.update({
+    where: { id: campaignId },
+    data: { status: "PAUSED" },
+  });
+
+  await prisma.campaignEmail.updateMany({
+    where: { campaignId, status: "QUEUED" },
+    data: { nextRetryAt: resumeAt },
+  });
+}
+
+async function processSingleEmail(
+  email: EmailWithRelations,
+  transporter: ReturnType<typeof getTransporter>
+): Promise<{ loginRateLimited: boolean }> {
   const provider =
     email.campaign.smtpProvider ||
     (await prisma.smtpProvider.findFirst({
@@ -189,7 +241,7 @@ async function processSingleEmail(email: EmailWithRelations) {
       where: { id: email.id },
       data: { status: "FAILED", errorMessage: "No SMTP provider configured" },
     });
-    return;
+    return { loginRateLimited: false };
   }
 
   await prisma.campaignEmail.update({
@@ -220,6 +272,7 @@ async function processSingleEmail(email: EmailWithRelations) {
       html: personalizedHtml,
       trackingId: email.trackingId,
       appUrl: APP_URL,
+      transporter,
     });
 
     await prisma.campaignEmail.update({
@@ -231,6 +284,21 @@ async function processSingleEmail(email: EmailWithRelations) {
       data: { campaignEmailId: email.id, type: "sent" },
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Send failed";
+    const loginLimited = isLoginRateLimitError(errorMessage);
+
+    if (loginLimited) {
+      await prisma.campaignEmail.update({
+        where: { id: email.id },
+        data: {
+          status: "QUEUED",
+          errorMessage: "Gmail login limit — will retry in 30 min",
+          nextRetryAt: new Date(Date.now() + 30 * 60_000),
+        },
+      });
+      return { loginRateLimited: true };
+    }
+
     const retryCount = email.retryCount + 1;
     const shouldRetry = retryCount < email.maxRetries;
 
@@ -239,7 +307,7 @@ async function processSingleEmail(email: EmailWithRelations) {
       data: {
         status: "FAILED",
         retryCount,
-        errorMessage: error instanceof Error ? error.message : "Send failed",
+        errorMessage,
         nextRetryAt: shouldRetry
           ? new Date(Date.now() + Math.pow(2, retryCount) * 60_000)
           : null,
@@ -254,7 +322,10 @@ async function processSingleEmail(email: EmailWithRelations) {
         type: "error",
       });
     }
+    return { loginRateLimited: false };
   }
+
+  return { loginRateLimited: false };
 }
 
 async function updateCampaignStatuses() {

@@ -6,8 +6,8 @@ export interface ProviderLimits {
 }
 
 const LIMITS: Record<string, ProviderLimits> = {
-  gmail: { daily: 450, hourly: 40, minDelayMs: 3000, type: "gmail" },
-  "smtp.gmail.com": { daily: 450, hourly: 40, minDelayMs: 3000, type: "gmail" },
+  gmail: { daily: 450, hourly: 30, minDelayMs: 8000, type: "gmail" },
+  "smtp.gmail.com": { daily: 450, hourly: 30, minDelayMs: 8000, type: "gmail" },
   sendgrid: { daily: 5000, hourly: 200, minDelayMs: 1000, type: "sendgrid" },
   "smtp.sendgrid.net": { daily: 5000, hourly: 200, minDelayMs: 1000, type: "sendgrid" },
   brevo: { daily: 300, hourly: 30, minDelayMs: 2000, type: "brevo" },
