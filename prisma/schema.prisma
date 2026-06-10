@@ -224,6 +224,8 @@ model CampaignEmail {
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   contact  Contact  @relation(fields: [contactId], references: [id])
   events   EmailEvent[]
+
+  @@unique([campaignId, contactId])
 }
 
 model EmailEvent {

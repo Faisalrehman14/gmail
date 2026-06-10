@@ -14,6 +14,10 @@ import { getProviderLimits } from "./autopilot/provider-limits";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const BATCH_SIZE = 5;
 
+const SENT_STATUSES = ["SENT", "DELIVERED", "OPENED", "CLICKED"] as const;
+
+let queueLock = false;
+
 export async function queueCampaignEmails(campaignId: string) {
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
@@ -36,16 +40,14 @@ export async function queueCampaignEmails(campaignId: string) {
     throw new Error("No valid recipients found");
   }
 
-  for (const contact of contacts) {
-    const existing = await prisma.campaignEmail.findFirst({
-      where: { campaignId, contactId: contact.id },
-    });
-    if (!existing) {
-      await prisma.campaignEmail.create({
-        data: { campaignId, contactId: contact.id, status: "QUEUED" },
-      });
-    }
-  }
+  await prisma.campaignEmail.createMany({
+    data: contacts.map((contact) => ({
+      campaignId,
+      contactId: contact.id,
+      status: "QUEUED" as const,
+    })),
+    skipDuplicates: true,
+  });
 
   await prisma.campaign.update({
     where: { id: campaignId },
@@ -57,6 +59,8 @@ export async function queueCampaignEmails(campaignId: string) {
 
 type EmailWithRelations = {
   id: string;
+  campaignId: string;
+  contactId: string;
   trackingId: string;
   retryCount: number;
   maxRetries: number;
@@ -114,12 +118,24 @@ async function recordAutopilotSend(campaignId: string, autopilotConfig: string) 
 }
 
 export async function processEmailQueue() {
+  if (queueLock) return;
+  queueLock = true;
+
+  try {
+    await processEmailQueueInner();
+  } finally {
+    queueLock = false;
+  }
+}
+
+async function processEmailQueueInner() {
   const now = new Date();
 
-  // Unstick emails left in SENDING after a crash or timeout
+  // Only re-queue SENDING rows that were never actually sent
   await prisma.campaignEmail.updateMany({
     where: {
       status: "SENDING",
+      sentAt: null,
       updatedAt: { lt: new Date(Date.now() - 2 * 60_000) },
     },
     data: { status: "QUEUED" },
@@ -153,17 +169,24 @@ export async function processEmailQueue() {
   });
 
   const toProcess: EmailWithRelations[] = [];
+  const seenContactCampaign = new Set<string>();
 
   for (const email of queued) {
     if (toProcess.length >= BATCH_SIZE) break;
+    const key = `${email.campaignId}:${email.contactId}`;
+    if (seenContactCampaign.has(key)) continue;
     const check = await canSendAutopilotEmail(email.campaign);
     if (check.allowed) {
+      seenContactCampaign.add(key);
       toProcess.push(email as EmailWithRelations);
     }
   }
 
   for (const email of retries) {
     if (toProcess.length >= BATCH_SIZE) break;
+    const key = `${email.campaignId}:${email.contactId}`;
+    if (seenContactCampaign.has(key)) continue;
+    seenContactCampaign.add(key);
     toProcess.push(email as EmailWithRelations);
   }
 
@@ -256,10 +279,41 @@ async function processSingleEmail(
     return { loginRateLimited: false };
   }
 
-  await prisma.campaignEmail.update({
-    where: { id: email.id },
+  // Never send twice to the same person in one campaign
+  const priorSend = await prisma.campaignEmail.findFirst({
+    where: {
+      campaignId: email.campaign.id,
+      contactId: email.contactId,
+      status: { in: [...SENT_STATUSES] },
+      NOT: { id: email.id },
+    },
+  });
+
+  if (priorSend) {
+    await prisma.campaignEmail.update({
+      where: { id: email.id },
+      data: {
+        status: "SENT",
+        sentAt: priorSend.sentAt ?? new Date(),
+        deliveredAt: priorSend.deliveredAt ?? new Date(),
+        errorMessage: null,
+      },
+    });
+    return { loginRateLimited: false };
+  }
+
+  const claimed = await prisma.campaignEmail.updateMany({
+    where: {
+      id: email.id,
+      status: { in: ["QUEUED", "FAILED", "PENDING"] },
+      sentAt: null,
+    },
     data: { status: "SENDING" },
   });
+
+  if (claimed.count === 0) {
+    return { loginRateLimited: false };
+  }
 
   try {
     const personalizeExtras = {

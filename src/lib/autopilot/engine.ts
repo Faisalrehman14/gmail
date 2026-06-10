@@ -296,6 +296,7 @@ export async function unblockAutopilotCampaign(campaignId: string) {
     where: {
       campaignId,
       status: { in: ["FAILED", "SENDING"] },
+      sentAt: null,
     },
     data: {
       status: "QUEUED",
@@ -306,7 +307,6 @@ export async function unblockAutopilotCampaign(campaignId: string) {
   });
 
   const { processEmailQueue } = await import("../campaign-service");
-  await processEmailQueue();
   await processEmailQueue();
 
   return config;

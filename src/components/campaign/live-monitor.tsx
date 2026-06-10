@@ -91,18 +91,13 @@ export function LiveMonitor({ campaignId, isActive }: { campaignId: string; isAc
   const [loading, setLoading] = useState(true);
 
   const fetchLive = useCallback(async () => {
-    const [liveRes] = await Promise.all([
-      fetch(`/api/campaigns/${campaignId}/live`),
-      isActive
-        ? fetch("/api/worker", { method: "POST" }).catch(() => null)
-        : Promise.resolve(null),
-    ]);
+    const liveRes = await fetch(`/api/campaigns/${campaignId}/live`);
     const json = await liveRes.json();
     if (json.success) {
       setData(json.data);
     }
     setLoading(false);
-  }, [campaignId, isActive]);
+  }, [campaignId]);
 
   useEffect(() => {
     fetchLive();
